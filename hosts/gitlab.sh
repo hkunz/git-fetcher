@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 # hosts/gitlab.sh
+# Example:  https://gitlab.com/simnavi/shapespyer
+
+detect_host() {
+    local url="$1"
+    if [[ "$url" =~ gitlab\.com/ ]]; then
+        HOST="gitlab"
+        OWNER_REPO="${url#*gitlab.com/}"
+        GIT_URL="https://gitlab.com/$OWNER_REPO.git"
+        return 0
+    fi
+    return 1  # not a GitLab URL
+}
 
 fetch_latest_gitlab() {
     local owner_repo="$1"

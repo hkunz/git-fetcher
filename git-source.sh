@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-SCRIPT_DIR=${ROOT_DIR}
+SCRIPT_DIR="$ROOT_DIR"
 source "$SCRIPT_DIR/lib.sh"
 
 LIST_BRANCHES=false
@@ -47,52 +47,19 @@ if [ -z "$INPUT" ]; then
     exit 1
 fi
 
-REPO=$(echo "$INPUT" | sed -E 's#https?://##; s#\.git$##; s#/$##')  # Normalize
-
 # =============================================
-# Supported hosts
+# Source host modules dynamically and detect host
 # =============================================
-declare -A HOST_MODULES=(
-    [github]="hosts/github.sh"
-    [gitlab]="hosts/gitlab.sh"
-    [bitbucket]="hosts/bitbucket.sh"
-    [googlesource]="hosts/googlesource.sh"
-)
-
 HOST=""
 OWNER_REPO=""
 GIT_URL=""
-
-# =============================================
-# Detect host and set OWNER_REPO / GIT_URL
-# =============================================
-for h in "${!HOST_MODULES[@]}"; do
-    case "$h" in
-        github|gitlab)
-            if [[ "$REPO" =~ $h\.com/ ]]; then
-                HOST="$h"
-                OWNER_REPO="${REPO#*${h}.com/}"
-                GIT_URL="https://$h.com/$OWNER_REPO.git"
-                break
-            fi
-            ;;
-        bitbucket)
-            if [[ "$REPO" =~ bitbucket\.org/ ]]; then
-                HOST="$h"
-                OWNER_REPO="${REPO#*bitbucket.org/}"
-                GIT_URL="https://bitbucket.org/$OWNER_REPO.git"
-                break
-            fi
-            ;;
-        googlesource)
-            if [[ "$REPO" =~ googlesource\.com/ ]]; then
-                HOST="$h"
-                OWNER_REPO="${INPUT%/}"
-                GIT_URL="$OWNER_REPO"
-                break
-            fi
-            ;;
-    esac
+for module in "$SCRIPT_DIR"/hosts/*.sh; do
+    source "$module"
+    if declare -f detect_host >/dev/null; then
+        if detect_host "$INPUT"; then
+            break
+        fi
+    fi
 done
 
 if [ -z "$HOST" ]; then
@@ -114,11 +81,6 @@ if $LIST_BRANCHES; then
 fi
 
 # =============================================
-# Source host module
-# =============================================
-source "$SCRIPT_DIR/${HOST_MODULES[$HOST]}"
-
-# =============================================
 # Call host-specific fetch function
 # =============================================
 FETCH_FUNC="fetch_latest_$HOST"
@@ -126,11 +88,10 @@ if ! declare -f "$FETCH_FUNC" >/dev/null; then
     eecho "Fetch function '$FETCH_FUNC' not found!"
     exit 1
 fi
-
 "$FETCH_FUNC" "$OWNER_REPO"
 
 # =============================================
-# Download and checksum
+# Download archive and compute checksum
 # =============================================
 mkdir -p downloads
 ARCHIVE_FILE="downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"

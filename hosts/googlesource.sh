@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 # hosts/googlesource.sh
+# Example: https://aomedia.googlesource.com/aom/
+
+detect_host() {
+    local url="$1"
+    if [[ "$url" =~ googlesource\.com/ ]]; then
+        HOST="googlesource"
+        OWNER_REPO="${url%/}"  # strip trailing slash
+        GIT_URL="$OWNER_REPO"
+        return 0
+    fi
+    return 1  # not a Googlesource URL
+}
 
 fetch_latest_googlesource() {
     local repo_url="$1"

@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
-# hosts/bitbucket.sh — fetch latest tag or default branch from Bitbucket
+# hosts/bitbucket.sh
+# Example: https://bitbucket.org/fargo3d/public
+
+detect_host() {
+    local url="$1"
+    if [[ "$url" =~ bitbucket\.org/ ]]; then
+        HOST="bitbucket"
+        OWNER_REPO="${url#*bitbucket.org/}"
+        GIT_URL="https://bitbucket.org/$OWNER_REPO.git"
+        return 0
+    fi
+    return 1
+}
 
 fetch_latest_bitbucket() {
     local owner_repo="$1"  # e.g., "atlassian/python-bitbucket"

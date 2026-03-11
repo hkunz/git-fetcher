@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 # hosts/github.sh
+# Example: https://github.com/google/farmhash
+
+detect_host() {
+    local url="$1"
+    if [[ "$url" =~ github\.com/ ]]; then  # Check if it's a GitHub URL
+        HOST="github"
+        OWNER_REPO="${url#*github.com/}" # Remove 'https://github.com/'
+        OWNER_REPO="${OWNER_REPO%.git}"  # Remove trailing .git if present
+        OWNER_REPO="${OWNER_REPO%/}"     # Remove trailing slash if present
+        GIT_URL="https://github.com/$OWNER_REPO.git"
+        return 0
+    fi
+    return 1  # not a GitHub URL
+}
 
 fetch_latest_github() {
     local owner_repo="$1"
 
     vecho "Checking repository: $owner_repo"
     decho "API URL: https://api.github.com/repos/$owner_repo"
-
-    # Ensure the repo is accessible
     check_http "https://api.github.com/repos/$owner_repo"
     vecho "Repository is reachable."
-
-    # Try to get the latest tag
     decho "Fetching tags from GitHub API..."
     local tag
     tag=$(curl -s "https://api.github.com/repos/$owner_repo/tags" | jq -r '.[0].name // empty')
