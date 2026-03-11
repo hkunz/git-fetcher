@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
-source lib.sh
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+SCRIPT_DIR=${ROOT_DIR}
+source "$SCRIPT_DIR/lib.sh"
 
 LIST_BRANCHES=false
 INPUT=""
@@ -15,6 +17,16 @@ while [[ $# -gt 0 ]]; do
         -b|--list-branches) LIST_BRANCHES=true ;;
         -v|--verbose) VERBOSE=true ;;
         --debug) DEBUG=true ;;
+        -h|--help)
+            echo "Usage: $0 [OPTIONS] <repo_url_or_owner/repo>"
+            echo
+            echo "Options:"
+            echo "  -b, --list-branches    List all branches of the repository"
+            echo "  -v, --verbose          Enable verbose output"
+            echo "  --debug                Enable debug output"
+            echo "  -h, --help             Show this help message"
+            exit 0
+            ;;
         -*)
             eecho "Unknown option: $1"
             exit 1
@@ -96,7 +108,7 @@ fi
 # =============================================
 # Source host module
 # =============================================
-source "${HOST_MODULES[$HOST]}"
+source "$SCRIPT_DIR/${HOST_MODULES[$HOST]}"
 
 # =============================================
 # Call host-specific fetch function
