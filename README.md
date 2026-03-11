@@ -39,7 +39,7 @@ This installation process will:
 * Install the man page to `$PREFIX/share/man/man1/git-source.1`
 * Record all installed files in `$PREFIX/git-source.install-manifest`
 
-Make sure your PATH includes the installation bin directory:
+Make sure your `PATH` includes the installation bin directory:
 
 ```
 export PATH="$PREFIX/bin:$PATH"
@@ -53,7 +53,7 @@ export MANPATH="$PREFIX/share/man:$MANPATH"
 
 ## Uninstallation
 
-o remove installed files, use the `uninstall.sh` script with the same prefix you used for installation:
+To remove installed files, use the `uninstall.sh` script with the same prefix you used for installation:
 
 ```
 # Default prefix
@@ -63,4 +63,4 @@ o remove installed files, use the `uninstall.sh` script with the same prefix you
 ./uninstall.sh --prefix $HOME/.local
 ```
 
-Note: Uninstallation does not affect other system-wide tools or Git repositories you manage. It only removes the installed wrapper, symlink, and man page.
+Note: Uninstallation does not affect other system-wide tools or Git repositories you manage. It only removes the installed wrapper, symlink, and `man` page.
