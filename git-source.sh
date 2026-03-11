@@ -68,11 +68,19 @@ GIT_URL=""
 # =============================================
 for h in "${!HOST_MODULES[@]}"; do
     case "$h" in
-        github|gitlab|bitbucket)
+        github|gitlab)
             if [[ "$REPO" =~ $h\.com/ ]]; then
                 HOST="$h"
                 OWNER_REPO="${REPO#*${h}.com/}"
                 GIT_URL="https://$h.com/$OWNER_REPO.git"
+                break
+            fi
+            ;;
+        bitbucket)
+            if [[ "$REPO" =~ bitbucket\.org/ ]]; then
+                HOST="$h"
+                OWNER_REPO="${REPO#*bitbucket.org/}"
+                GIT_URL="https://bitbucket.org/$OWNER_REPO.git"
                 break
             fi
             ;;
