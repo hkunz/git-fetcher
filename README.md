@@ -48,7 +48,7 @@ export PATH="$PREFIX/bin:$PATH"
 And if you want man pages accessible:
 
 ```
-And if you want man pages accessible:
+export MANPATH="$PREFIX/share/man:$MANPATH"
 ```
 
 ## Uninstallation
