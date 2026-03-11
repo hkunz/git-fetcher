@@ -1,0 +1,18 @@
+# git-fetcher temporary/download files
+*.tar.gz
+log/
+tmp/
+
+# Editor/IDE files
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Shell / swap files
+*.swp
+*.swo
+*.bak
+
