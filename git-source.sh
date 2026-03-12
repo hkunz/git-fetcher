@@ -17,14 +17,16 @@ while [[ $# -gt 0 ]]; do
         -b|--list-branches) LIST_BRANCHES=true ;;
         -v|--verbose) VERBOSE=true ;;
         --debug) DEBUG=true ;;
+        --generate-mxe-makefile) GENERATE_MXE=true ;;  # <-- new flag
         -h|--help)
             echo "Usage: $0 [OPTIONS] <repo_url_or_owner/repo>"
             echo
             echo "Options:"
-            echo "  -b, --list-branches    List all branches of the repository"
-            echo "  -v, --verbose          Enable verbose output"
-            echo "  --debug                Enable debug output"
-            echo "  -h, --help             Show this help message"
+            echo "  -b, --list-branches          List all branches of the repository"
+            echo "  -v, --verbose                Enable verbose output"
+            echo "  --debug                      Enable debug output"
+            echo "  --generate-mxe-makefile      Generate MXE .mk file after download"
+            echo "  -h, --help                   Show this help message"
             exit 0
             ;;
         -*)
@@ -97,3 +99,15 @@ mkdir -p "$ROOT_DIR/downloads"
 ARCHIVE_FILE="$ROOT_DIR/downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
 download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
 compute_sha256 "$ARCHIVE_FILE"
+
+# =============================================
+# Optional: generate MXE .mk file
+# =============================================
+if $GENERATE_MXE; then
+    vecho "Generating MXE .mk file..."
+    bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
+        --pkg "$OWNER_REPO" \
+        --version "$VERSION" \
+        --archive "$ARCHIVE_FILE" \
+        --checksum "$(compute_sha256 "$ARCHIVE_FILE")"
+fi

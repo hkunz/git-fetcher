@@ -21,7 +21,7 @@ It automates the retrieval of the latest version of a repository, saving archive
 
 You can run `git-source` directly from the repository without installing:
 
-```
+```bash
 # From the project root
 ./git-source.sh <repo_url_or_owner/repo>
 
@@ -41,21 +41,31 @@ This installation process will:
 
 Make sure your `PATH` includes the installation bin directory:
 
-```
+```bash
 export PATH="$PREFIX/bin:$PATH"
 ```
 
 And if you want man pages accessible:
 
-```
+```bash
 export MANPATH="$PREFIX/share/man:$MANPATH"
+```
+
+## Enable Bash Autocomplete
+
+`git-source` supports `Tab` completion for all flags and options. To enable it:
+
+1. Source the completion script in your current shell:
+
+```bash
+source scripts/git-source-completion.sh
 ```
 
 ## Uninstallation
 
 To remove installed files, use the `uninstall.sh` script with the same prefix you used for installation:
 
-```
+```bash
 # Default prefix
 ./uninstall.sh
 
