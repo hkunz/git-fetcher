@@ -12,12 +12,14 @@ DEBUG=false
 # =============================================
 # Argument parsing
 # =============================================
+FORCE_DOWNLOAD=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -b|--list-branches) LIST_BRANCHES=true ;;
         -v|--verbose) VERBOSE=true ;;
         --debug) DEBUG=true ;;
-        --generate-mxe-makefile) GENERATE_MXE=true ;;  # <-- new flag
+        --generate-mxe-makefile) GENERATE_MXE=true ;;
+        --force) FORCE_DOWNLOAD=true ;;  # <-- new force download flag
         -h|--help)
             echo "Usage: $0 [OPTIONS] <repo_url_or_owner/repo>"
             echo
@@ -26,6 +28,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -v, --verbose                Enable verbose output"
             echo "  --debug                      Enable debug output"
             echo "  --generate-mxe-makefile      Generate MXE .mk file after download"
+            echo "  --force                      Redownload archive even if it exists"
             echo "  -h, --help                   Show this help message"
             exit 0
             ;;
@@ -97,8 +100,16 @@ fi
 # =============================================
 mkdir -p "$ROOT_DIR/downloads"
 ARCHIVE_FILE="$ROOT_DIR/downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
-download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
-compute_sha256 "$ARCHIVE_FILE"
+
+if [[ -f "$ARCHIVE_FILE" && "$FORCE_DOWNLOAD" == false ]]; then
+    iecho "Archive already exists, skipping download: $ARCHIVE_FILE"
+else
+    vecho "Downloading archive..."
+    download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
+fi
+
+CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
+iecho "INFO: SHA256 checksum: $CHECKSUM"
 
 # =============================================
 # Optional: generate MXE .mk file
@@ -109,5 +120,5 @@ if $GENERATE_MXE; then
         --pkg "$OWNER_REPO" \
         --version "$VERSION" \
         --archive "$ARCHIVE_FILE" \
-        --checksum "$(compute_sha256 "$ARCHIVE_FILE")"
+        --checksum "$CHECKSUM"
 fi
