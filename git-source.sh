@@ -31,7 +31,7 @@ print_usage() {
 }
 
 # =============================================
-# Argument parsing
+# Parse arguments
 # =============================================
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -40,44 +40,29 @@ while [[ $# -gt 0 ]]; do
         --debug) DEBUG=true ;;
         --generate-mxe-makefile) GENERATE_MXE=true ;;
         --force) FORCE_DOWNLOAD=true ;;
-        -h|--help)
-            print_usage
-            exit 0
-            ;;
-        -*)
-            eecho "Unknown option: $1"
-            exit 1
-            ;;
+        -h|--help) print_usage; exit 0 ;;
+        -*) eecho "Unknown option: $1"; exit 1 ;;
         *) INPUT="$1" ;;
     esac
     shift
 done
 
-# Check required argument
-if [ -z "$INPUT" ]; then
-    print_usage
-    exit 1
-fi
+[ -n "$INPUT" ] || { print_usage; exit 1; }
 
 # =============================================
-# Source host modules dynamically and detect host
+# Host detection
 # =============================================
 HOST=""
 OWNER_REPO=""
 GIT_URL=""
 for module in "$ROOT_DIR"/hosts/*.sh; do
     source "$module"
-    if declare -f detect_host >/dev/null; then
-        if detect_host "$INPUT"; then
-            break
-        fi
+    if declare -f detect_host >/dev/null && detect_host "$INPUT"; then
+        break
     fi
 done
 
-if [ -z "$HOST" ]; then
-    eecho "Unsupported host in URL '$INPUT'"
-    exit 1
-fi
+[ -n "$HOST" ] || { eecho "Unsupported host in URL '$INPUT'"; exit 1; }
 
 vecho "Detected host: $HOST"
 vecho "Repository (owner/name): $OWNER_REPO"
@@ -93,70 +78,64 @@ if $LIST_BRANCHES; then
 fi
 
 # =============================================
-# Download archive and compute checksum with DB
+# Load archive info from DB
 # =============================================
 init_db
 entry=$(get_db_entry "$GIT_URL")
 get_entry_field() { echo "$entry" | jq -r "$1 // empty"; }
 
-use_db=false
-ARCHIVE_FILE_DB=$(get_entry_field '.archive')
-if [[ -n "$entry" && -f "$ARCHIVE_FILE_DB" && "$FORCE_DOWNLOAD" == false ]]; then
-    use_db=true
-fi
-
-if $use_db; then
-
+load_from_db() {
     ARCHIVE_URL=$(get_entry_field '.archive_url')
-    ARCHIVE_FILE="$ARCHIVE_FILE_DB"
+    ARCHIVE_FILE=$(get_entry_field '.archive')
     ARCHIVE_NAME=$(basename "$ARCHIVE_FILE")
     PACKAGE_NAME=$(get_entry_field '.package')
     DESCRIPTION=$(get_entry_field '.description')
     TAG=$(get_entry_field '.latest_tag')
     BRANCH=$(get_entry_field '.default_branch')
     CHECKSUM=$(get_entry_field '.sha256')
+}
 
-    iecho "Download URL: $ARCHIVE_URL"
-    iecho "Using archive from DB: $ARCHIVE_FILE"
-
-    if [ -n "$TAG" ]; then
-        iecho "Latest Tag: $(bold_bright_green "$TAG")"
-    else
-        iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag found)"
-    fi
-
-else
+download_archive_if_needed() {
     FETCH_FUNC="fetch_latest_$HOST"
-    if ! declare -f "$FETCH_FUNC" >/dev/null; then
-        eecho "Fetch function '$FETCH_FUNC' not found!"
-        exit 1
-    fi
+    [ "$(declare -f $FETCH_FUNC)" ] || { eecho "Fetch function '$FETCH_FUNC' not found!"; exit 1; }
 
-    "$FETCH_FUNC" "$OWNER_REPO"  # Sets TAG and BRANCH
-
-    if [ -n "$TAG" ]; then
-        iecho "Latest Tag: $(bold_bright_green "$TAG")"
-    else
-        iecho "$(bright_red "No tags found")."
-        iecho "Using default branch: $(bold_bright_green "$BRANCH")"
-    fi
+    "$FETCH_FUNC" "$OWNER_REPO"  # sets TAG and BRANCH
 
     ARCHIVE_VERSION="${TAG:-$BRANCH}"
     ARCHIVE_NAME="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_NAME"
     PACKAGE_NAME="$(basename "$OWNER_REPO")"
-    CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
 
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
+    CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
     update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION"
+}
+
+# Decide whether to use DB or download
+ARCHIVE_FILE_DB=$(get_entry_field '.archive')
+if [[ -n "$entry" && -f "$ARCHIVE_FILE_DB" && "$FORCE_DOWNLOAD" == false ]]; then
+    load_from_db
+    iecho "Download URL: $ARCHIVE_URL"
+    iecho "Using archive from DB: $ARCHIVE_FILE"
+else
+    download_archive_if_needed
     iecho "Downloaded archive: $ARCHIVE_FILE"
 fi
 
+# Show tag or branch
+if [ -n "$TAG" ]; then
+    iecho "Latest Tag: $(bold_bright_green "$TAG")"
+else
+    iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag found)"
+fi
+
+# =============================================
 # Display summary
-iecho "Downloaded archive file: $(bold_bright_cyan "$ARCHIVE_NAME")"
+# =============================================
+iecho "Downloaded file: $(bold_bright_cyan "$ARCHIVE_NAME")"
 iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
-[ -n "$DESCRIPTION" ] && iecho "Package Description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
+[ -n "$DESCRIPTION" ] && iecho "Package description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
 
 # Determine version
 if [ -n "$TAG" ] && [[ "$TAG" =~ ([0-9]+(\.[0-9]+)*) ]]; then
@@ -171,7 +150,6 @@ iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
 # =============================================
 # Optional: generate MXE .mk file
 # =============================================
-
 if [[ "$GENERATE_MXE" == true ]]; then
     bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
         --pkg "$PACKAGE_NAME" \
