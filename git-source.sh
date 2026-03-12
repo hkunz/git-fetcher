@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-SCRIPT_DIR="$ROOT_DIR"
-source "$SCRIPT_DIR/scripts/lib.sh"
-source "$SCRIPT_DIR/scripts/lib-db.sh"
+SCRIPT_DIR="$ROOT_DIR/scripts"
+
+source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/lib-db.sh"
+source "$SCRIPT_DIR/lib-color.sh"
 
 LIST_BRANCHES=false
 INPUT=""
@@ -59,7 +61,7 @@ fi
 HOST=""
 OWNER_REPO=""
 GIT_URL=""
-for module in "$SCRIPT_DIR"/hosts/*.sh; do
+for module in "$ROOT_DIR"/hosts/*.sh; do
     source "$module"
     if declare -f detect_host >/dev/null; then
         if detect_host "$INPUT"; then
@@ -89,37 +91,54 @@ fi
 # =============================================
 # Download archive and compute checksum with DB
 # =============================================
-init_db  # ensure DB exists
-
+init_db
 entry=$(get_db_entry "$GIT_URL")
 
-# Check to use DB entry if available
 if [[ -n "$entry" && -f $(echo "$entry" | jq -r '.archive') && "$FORCE_DOWNLOAD" == false ]]; then
-
+    # Use existing DB entry
     ARCHIVE_FILE=$(echo "$entry" | jq -r '.archive')
-    VERSION=$(echo "$entry" | jq -r '.latest_tag')
+    ARCHIVE_NAME=$(basename "$ARCHIVE_FILE")
+    TAG=$(echo "$entry" | jq -r '.latest_tag')
+    [ "$TAG" == "null" ] && TAG=""
+    BRANCH=$(echo "$entry" | jq -r '.default_branch')
     CHECKSUM=$(echo "$entry" | jq -r '.sha256')
     iecho "Using archive from DB: $ARCHIVE_FILE"
 
-else # 🛑 DB missing or no entry: must download to create DB entry
+else
+    # DB missing or force download → fetch host-specific info
     FETCH_FUNC="fetch_latest_$HOST"
     if ! declare -f "$FETCH_FUNC" >/dev/null; then
         eecho "Fetch function '$FETCH_FUNC' not found!"
         exit 1
     fi
 
-    "$FETCH_FUNC" "$OWNER_REPO"
+    "$FETCH_FUNC" "$OWNER_REPO"  # fetch_latest_* should set TAG and BRANCH
 
-    ARCHIVE_FILE="$ROOT_DIR/downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
+    [ -z "$TAG" ] && TAG=""  # Ensure TAG is empty string if repo has no tags
+
+    ARCHIVE_VERSION="${TAG:-$BRANCH}"  # Determine version to download (TAG if exists, otherwise BRANCH)
+    ARCHIVE_FILE="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
+    ARCHIVE_URL="https://gitlab.com/$OWNER_REPO/-/archive/$ARCHIVE_VERSION/$ARCHIVE_FILE"
+
+    # Download archive
     vecho "Downloading archive..."
-    download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
+    mkdir -p "$ROOT_DIR/downloads/"
+    download_archive "$ARCHIVE_URL" "$ROOT_DIR/downloads/$ARCHIVE_FILE"
+    ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
-    update_db "$GIT_URL" "$VERSION" "$ARCHIVE_FILE" "$CHECKSUM"
-    iecho "Downloaded file: $(basename "$ARCHIVE_FILE")"
+
+    # Store in DB with correct TAG and BRANCH
+    update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_FILE" "$CHECKSUM"
     iecho "Downloaded archive: $ARCHIVE_FILE"
 fi
 
-iecho "SHA256 checksum: $CHECKSUM"
+iecho "Downloaded file: $(bold_bright_cyan "$(basename "$ARCHIVE_FILE")")"
+if [ -n "$TAG" ]; then
+    iecho "Latest Tag: $(bold_bright_cyan "$TAG")"
+else
+    iecho "Default Branch: $(bold_bright_cyan "$BRANCH") (No tag available)"
+fi
+iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
 
 # =============================================
 # Optional: generate MXE .mk file
@@ -129,6 +148,7 @@ if [[ "$GENERATE_MXE" == true ]]; then
     bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
         --pkg "$OWNER_REPO" \
         --version "$VERSION" \
+        --version "$TAG" \
         --archive "$ARCHIVE_FILE" \
         --checksum "$CHECKSUM"
 fi

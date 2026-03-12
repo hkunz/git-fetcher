@@ -16,7 +16,7 @@ detect_host() {
 fetch_latest_gitlab() {
     local owner_repo="$1"
 
-    # URL-encode the repo path for GitLab API
+    # URL-encode repo path for GitLab API
     vecho "Encoding repo path for API: $owner_repo"
     local encoded_repo
     encoded_repo=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$owner_repo''', safe=''))")
@@ -26,7 +26,6 @@ fetch_latest_gitlab() {
     vecho "GitLab API URL: $api"
 
     # Check that the repo exists
-    vecho "Checking HTTP status for repo..."
     local status
     status=$(curl -s -o /dev/null -w "%{http_code}" "$api")
     if [ "$status" -ne 200 ]; then
@@ -36,24 +35,27 @@ fetch_latest_gitlab() {
     iecho "Repository is reachable."
 
     # Get latest tag
-    vecho "Fetching tags from GitLab API..."
     local tag
     tag=$(curl -s "$api/repository/tags" | jq -r '.[0].name // empty')
-    decho "Raw tag response: $tag"
+    decho "Raw tag response: '$tag'"
 
     if [ -n "$tag" ]; then
-        VERSION="$tag"
+        TAG="$tag"
+        BRANCH=""   # clear branch
         ARCHIVE_URL="https://gitlab.com/$owner_repo/-/archive/$tag/$(basename "$owner_repo")-$tag.tar.gz"
-        iecho "Latest tag: $VERSION"
+        iecho "Latest tag: $TAG"
     else
-        # Fallback: default branch
-        vecho "No tags found, fetching default branch..."
-        VERSION=$(curl -s "$api" | jq -r '.default_branch')
-        ARCHIVE_URL="https://gitlab.com/$owner_repo/-/archive/$VERSION/$(basename "$owner_repo")-$VERSION.tar.gz"
-        iecho "No tags found. Using default branch: $VERSION"
+        TAG=""      # no tag
+        BRANCH=$(curl -s "$api" | jq -r '.default_branch')
+        ARCHIVE_URL="https://gitlab.com/$owner_repo/-/archive/$BRANCH/$(basename "$owner_repo")-$BRANCH.tar.gz"
+        iecho "No tags found. Using default branch: $BRANCH"
     fi
 
-    ARCHIVE_FILE="$(basename "$owner_repo")-$VERSION.tar.gz"
-    decho "[DEBUG] Archive file: $ARCHIVE_FILE"
-    decho "[DEBUG] Archive URL: $ARCHIVE_URL"
+    # Construct local archive filename
+    ARCHIVE_FILE="$(basename "$owner_repo")-${TAG:-$BRANCH}.tar.gz"
+
+    decho "TAG          = '$TAG'"
+    decho "BRANCH       = '$BRANCH'"
+    decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
+    decho "ARCHIVE_URL  = '$ARCHIVE_URL'"
 }

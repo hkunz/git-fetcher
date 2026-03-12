@@ -41,20 +41,22 @@ fetch_latest_bitbucket() {
     decho "Raw latest tag from API: '$tag'"
 
     if [ -n "$tag" ]; then
-        VERSION="$tag"
+        TAG="$tag"
+        BRANCH=""   # clear branch
         ARCHIVE_URL="https://bitbucket.org/$owner_repo/get/$tag.tar.gz"
-        echo "Latest tag: $VERSION"
+        iecho "Latest tag: $TAG"
         vecho "Constructed archive URL: $ARCHIVE_URL"
     else
-        # Fallback: default branch
-        local branch
-        branch=$(curl -s "$api" | jq -r '.mainbranch.name // empty')
-        VERSION="$branch"
-        ARCHIVE_URL="https://bitbucket.org/$owner_repo/get/$branch.tar.gz"
-        echo "No tags found. Using default branch: $VERSION"
+        TAG=""      # no tags
+        BRANCH=$(curl -s "$api" | jq -r '.mainbranch.name // empty')
+        ARCHIVE_URL="https://bitbucket.org/$owner_repo/get/$BRANCH.tar.gz"
+        iecho "No tags found. Using default branch: $BRANCH"
         vecho "Constructed archive URL for branch: $ARCHIVE_URL"
     fi
 
-    ARCHIVE_FILE="$(basename "$repo")-$VERSION.tar.gz"
-    decho "[DEBUG] Archive file will be: $ARCHIVE_FILE"
+    ARCHIVE_FILE="$(basename "$repo")-${TAG:-$BRANCH}.tar.gz"
+    decho "[DEBUG] TAG          = '$TAG'"
+    decho "[DEBUG] BRANCH       = '$BRANCH'"
+    decho "[DEBUG] ARCHIVE_FILE = '$ARCHIVE_FILE'"
+    decho "[DEBUG] ARCHIVE_URL  = '$ARCHIVE_URL'"
 }

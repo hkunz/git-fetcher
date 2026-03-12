@@ -21,17 +21,21 @@ get_db_entry() {
 # Update/add an entry
 update_db() {
     local url="$1"
-    local version="$2"
-    local archive="$3"
-    local sha="$4"
+    local tag="$2"
+    local branch="$3"
+    local archive="$4"
+    local sha="$5"
 
     init_db
+    local tmp
     tmp=$(mktemp)
     jq --arg url "$url" \
-       --arg version "$version" \
+       --arg tag "$tag" \
+       --arg branch "$branch" \
        --arg archive "$archive" \
        --arg sha "$sha" \
-       '.[$url] = {latest_tag: $version, archive: $archive, sha256: $sha}' "$DB_FILE" > "$tmp"
+       '.[$url] = {latest_tag: $tag, default_branch: $branch, archive: $archive, sha256: $sha}' \
+       "$DB_FILE" > "$tmp"
     mv "$tmp" "$DB_FILE"
 }
 

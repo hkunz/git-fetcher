@@ -19,39 +19,45 @@ fetch_latest_googlesource() {
 
     vecho "Fetching tags from GoogleSource repository: $repo_url"
 
-    # --- Determine latest version ---
+    # --- Get all tags ---
     local raw_tags
     raw_tags=$(git ls-remote --tags "$repo_url" 2>/dev/null | awk '{print $2}')
     decho "Raw tags from ls-remote:"
     decho "$raw_tags"
 
-    VERSION=$(echo "$raw_tags" \
+    # --- Determine latest tag ---
+    local tag
+    tag=$(echo "$raw_tags" \
         | grep -v '{}' \
         | sed 's#refs/tags/##' \
         | sort -V \
         | tail -n1)
 
-    if [ -z "$VERSION" ]; then
-        VERSION=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null \
+    if [ -n "$tag" ]; then
+        TAG="$tag"
+        BRANCH=""
+        VERSION="$TAG"
+        iecho "Using latest tag: $TAG"
+    else
+        TAG=""
+        BRANCH=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null \
             | awk '/ref:/ {print $2}' \
             | sed 's#refs/heads/##')
-        iecho "No tags found. Using default branch: $VERSION"
-    else
-        iecho "Using latest tag: $VERSION"
+        VERSION="$BRANCH"
+        iecho "No tags found. Using default branch: $BRANCH"
     fi
 
-    # --- Construct archive information ---
+    # --- Construct archive info ---
     local base
     base="$(basename "$repo_url")"
     ARCHIVE_URL="$repo_url/+archive/$VERSION.tar.gz"
     ARCHIVE_FILE="$base-$VERSION.tar.gz"
-    decho "Constructed ARCHIVE_URL: $ARCHIVE_URL"
-    decho "Archive filename will be: $ARCHIVE_FILE"
+    decho "ARCHIVE_URL: $ARCHIVE_URL"
+    decho "ARCHIVE_FILE: $ARCHIVE_FILE"
 
-    # --- Inform user about reproducibility ---
+    # --- Warning about dynamic tarballs ---
     iecho
     iecho "Note: Googlesource generates tarballs dynamically."
-    iecho "The SHA256 checksum may differ between downloads"
-    iecho "even when the source code has not changed."
+    iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
     iecho
 }

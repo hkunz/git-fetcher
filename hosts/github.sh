@@ -28,7 +28,7 @@ fetch_latest_github() {
     decho "Raw latest tag from API: '$tag'"
 
     if [ -n "$tag" ]; then
-        VERSION="$tag"
+        TAG="$tag"
         ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/tags/$tag.tar.gz"
         iecho "Latest tag: $tag"
         vecho "Constructed archive URL: $ARCHIVE_URL"
@@ -36,12 +36,14 @@ fetch_latest_github() {
         decho "No tags found, fetching default branch..."
         local branch
         branch=$(curl -s "https://api.github.com/repos/$owner_repo" | jq -r '.default_branch')
-        VERSION="$branch"
+        BRANCH="$branch"                     # ← STORE IN BRANCH, NOT TAG
         ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/heads/$branch.tar.gz"
-        iecho "No tags found. Using default branch: $branch"
+        TAG=""                               # ← CLEAR TAG
+        iecho "$(bright_red "No tags found")."
+        iecho "Using default branch: $(bold_bright_cyan "$branch")"
         vecho "Constructed archive URL for branch: $ARCHIVE_URL"
     fi
 
-    decho "VERSION set to: $VERSION"
+    decho "TAG set to: $TAG"
     decho "ARCHIVE_URL set to: $ARCHIVE_URL"
 }
