@@ -23,8 +23,11 @@ update_db() {
     local url="$1"
     local tag="$2"
     local branch="$3"
-    local archive="$4"
-    local sha="$5"
+    local archive_url="$4"
+    local archive="$5"
+    local sha="$6"
+    local package="$7"
+    local description="$8"
 
     init_db
     local tmp
@@ -32,9 +35,12 @@ update_db() {
     jq --arg url "$url" \
        --arg tag "$tag" \
        --arg branch "$branch" \
+       --arg archive_url "$archive_url" \
        --arg archive "$archive" \
        --arg sha "$sha" \
-       '.[$url] = {latest_tag: $tag, default_branch: $branch, archive: $archive, sha256: $sha}' \
+       --arg package "$package" \
+       --arg description "$description" \
+       '.[$url] = {latest_tag: $tag, default_branch: $branch, archive_url: $archive_url, archive: $archive, sha256: $sha, package: $package, description: $description}' \
        "$DB_FILE" > "$tmp"
     mv "$tmp" "$DB_FILE"
 }

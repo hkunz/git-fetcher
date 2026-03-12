@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # hosts/gitlab.sh
-# Example:  https://gitlab.com/simnavi/shapespyer
+# Example:  https://gitlab.com/simnavi/shapespyer https://gitlab.com/gitlab-tests/sample-project.git
 
 detect_host() {
     local url="$1"
@@ -43,19 +43,19 @@ fetch_latest_gitlab() {
         TAG="$tag"
         BRANCH=""   # clear branch
         ARCHIVE_URL="https://gitlab.com/$owner_repo/-/archive/$tag/$(basename "$owner_repo")-$tag.tar.gz"
-        iecho "Latest tag: $TAG"
     else
         TAG=""      # no tag
         BRANCH=$(curl -s "$api" | jq -r '.default_branch')
         ARCHIVE_URL="https://gitlab.com/$owner_repo/-/archive/$BRANCH/$(basename "$owner_repo")-$BRANCH.tar.gz"
-        iecho "No tags found. Using default branch: $BRANCH"
     fi
 
     # Construct local archive filename
     ARCHIVE_FILE="$(basename "$owner_repo")-${TAG:-$BRANCH}.tar.gz"
+    DESCRIPTION=$(curl -s "$api" | jq -r '.description // ""')
 
     decho "TAG          = '$TAG'"
     decho "BRANCH       = '$BRANCH'"
     decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
     decho "ARCHIVE_URL  = '$ARCHIVE_URL'"
+    decho "DESCRIPTION  = '$DESCRIPTION'"
 }

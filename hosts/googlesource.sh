@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # hosts/googlesource.sh
-# Example: https://aomedia.googlesource.com/aom/
+# Example: https://aomedia.googlesource.com/aom/ https://go.googlesource.com/scratch
 
 detect_host() {
     local url="$1"
@@ -54,6 +54,9 @@ fetch_latest_googlesource() {
     ARCHIVE_FILE="$base-$VERSION.tar.gz"
     decho "ARCHIVE_URL: $ARCHIVE_URL"
     decho "ARCHIVE_FILE: $ARCHIVE_FILE"
+
+    # GoogleSource doesn’t provide a description via HTTP API. You’d need to extract info from the README.md in the repo if you want a description.
+    DESCRIPTION="No description available"  
 
     # --- Warning about dynamic tarballs ---
     iecho

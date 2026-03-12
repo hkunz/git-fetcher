@@ -96,13 +96,21 @@ entry=$(get_db_entry "$GIT_URL")
 
 if [[ -n "$entry" && -f $(echo "$entry" | jq -r '.archive') && "$FORCE_DOWNLOAD" == false ]]; then
     # Use existing DB entry
+    ARCHIVE_URL=$(echo "$entry" | jq -r '.archive_url')
     ARCHIVE_FILE=$(echo "$entry" | jq -r '.archive')
     ARCHIVE_NAME=$(basename "$ARCHIVE_FILE")
+    PACKAGE_NAME=$(echo "$entry" | jq -r '.package')
+    DESCRIPTION=$(echo "$entry" | jq -r '.description')
     TAG=$(echo "$entry" | jq -r '.latest_tag')
     [ "$TAG" == "null" ] && TAG=""
     BRANCH=$(echo "$entry" | jq -r '.default_branch')
     CHECKSUM=$(echo "$entry" | jq -r '.sha256')
     iecho "Using archive from DB: $ARCHIVE_FILE"
+    if [ -n "$TAG" ]; then
+        iecho "Latest Tag: $(bold_bright_green "$TAG")"
+    else
+        iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag available)"
+    fi
 
 else
     # DB missing or force download → fetch host-specific info
@@ -114,31 +122,32 @@ else
 
     "$FETCH_FUNC" "$OWNER_REPO"  # fetch_latest_* should set TAG and BRANCH
 
-    [ -z "$TAG" ] && TAG=""  # Ensure TAG is empty string if repo has no tags
+    if [ -n "$TAG" ]; then
+        iecho "Latest Tag: $(bold_bright_cyan "$TAG")"
+    else
+        iecho "$(bright_red "No tags found")."
+        iecho "Using default branch: $(bold_bright_green "$BRANCH")"
+    fi
 
     ARCHIVE_VERSION="${TAG:-$BRANCH}"  # Determine version to download (TAG if exists, otherwise BRANCH)
     ARCHIVE_FILE="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
-    ARCHIVE_URL="https://gitlab.com/$OWNER_REPO/-/archive/$ARCHIVE_VERSION/$ARCHIVE_FILE"
 
     # Download archive
     vecho "Downloading archive..."
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ROOT_DIR/downloads/$ARCHIVE_FILE"
+    PACKAGE_NAME="$(basename "$OWNER_REPO")"
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
 
     # Store in DB with correct TAG and BRANCH
-    update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_FILE" "$CHECKSUM"
+    update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION"
     iecho "Downloaded archive: $ARCHIVE_FILE"
 fi
 
 iecho "Downloaded file: $(bold_bright_cyan "$(basename "$ARCHIVE_FILE")")"
-
-if [ -n "$TAG" ]; then
-    iecho "Latest Tag: $(bold_bright_cyan "$TAG")"
-else
-    iecho "Default Branch: $(bold_bright_cyan "$BRANCH") (No tag available)"
-fi
+iecho "Package: $(bold_bright_green "$PACKAGE_NAME")"
+[ -n "$DESCRIPTION" ] && iecho "Description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
 
 if [ -n "$TAG" ]; then
     # Extract numeric part after optional prefix
@@ -151,7 +160,7 @@ else
     VERSION="$BRANCH"
 fi
 
-iecho "Version: $(bold_yellow "$VERSION")"
+iecho "Version: $(bold_bright_cyan "$VERSION")"
 iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
 
 # =============================================
@@ -159,11 +168,11 @@ iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
 # =============================================
 
 if [[ "$GENERATE_MXE" == true ]]; then
-    vecho "Generating MXE .mk file..."
     bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
-        --pkg "$OWNER_REPO" \
+        --pkg "$PACKAGE_NAME" \
         --version "$VERSION" \
-        --version "$TAG" \
         --archive "$ARCHIVE_FILE" \
-        --checksum "$CHECKSUM"
+        --checksum "$CHECKSUM" \
+        --description "$DESCRIPTION" \
+        --test-lang "cpp"
 fi
