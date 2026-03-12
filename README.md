@@ -17,6 +17,18 @@ It automates the retrieval of the latest version of a repository, saving archive
 
 ---
 
+## Requirements
+
+The following tools must be installed for `git-source` to work properly:
+
+- **bash** – The scripts are written in Bash. Most Linux/macOS systems include this by default.
+- **git** – Needed to fetch repository info, list branches, and for `fetch_latest_*` functions.
+- **jq** – Required to read/write the JSON database safely. Must be installed separately.
+- **curl** or **wget** – Used by `download_archive` to fetch files from URLs.
+- **sha256sum** – Used to compute checksums. On macOS, this may be `shasum -a 256`.
+- **make** – Needed if building packages locally or running MXE build commands.
+- **MXE toolchain** (optional) – Only required if you plan to generate `.mk` files and build packages.
+
 ## Installation
 
 You can run `git-source` directly from the repository without installing:

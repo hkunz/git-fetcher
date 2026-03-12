@@ -2,7 +2,8 @@
 set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 SCRIPT_DIR="$ROOT_DIR"
-source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/scripts/lib.sh"
+source "$SCRIPT_DIR/scripts/lib-db.sh"
 
 LIST_BRANCHES=false
 INPUT=""
@@ -86,35 +87,44 @@ if $LIST_BRANCHES; then
 fi
 
 # =============================================
-# Call host-specific fetch function
+# Download archive and compute checksum with DB
 # =============================================
-FETCH_FUNC="fetch_latest_$HOST"
-if ! declare -f "$FETCH_FUNC" >/dev/null; then
-    eecho "Fetch function '$FETCH_FUNC' not found!"
-    exit 1
-fi
-"$FETCH_FUNC" "$OWNER_REPO"
+init_db  # ensure DB exists
 
-# =============================================
-# Download archive and compute checksum
-# =============================================
-mkdir -p "$ROOT_DIR/downloads"
-ARCHIVE_FILE="$ROOT_DIR/downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
+entry=$(get_db_entry "$GIT_URL")
 
-if [[ -f "$ARCHIVE_FILE" && "$FORCE_DOWNLOAD" == false ]]; then
-    iecho "Archive already exists, skipping download: $ARCHIVE_FILE"
-else
+# Check to use DB entry if available
+if [[ -n "$entry" && -f $(echo "$entry" | jq -r '.archive') && "$FORCE_DOWNLOAD" == false ]]; then
+
+    ARCHIVE_FILE=$(echo "$entry" | jq -r '.archive')
+    VERSION=$(echo "$entry" | jq -r '.latest_tag')
+    CHECKSUM=$(echo "$entry" | jq -r '.sha256')
+    iecho "Using archive from DB: $ARCHIVE_FILE"
+
+else # 🛑 DB missing or no entry: must download to create DB entry
+    FETCH_FUNC="fetch_latest_$HOST"
+    if ! declare -f "$FETCH_FUNC" >/dev/null; then
+        eecho "Fetch function '$FETCH_FUNC' not found!"
+        exit 1
+    fi
+
+    "$FETCH_FUNC" "$OWNER_REPO"
+
+    ARCHIVE_FILE="$ROOT_DIR/downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
     vecho "Downloading archive..."
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
+    CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
+    update_db "$GIT_URL" "$VERSION" "$ARCHIVE_FILE" "$CHECKSUM"
+    iecho "Downloaded file: $(basename "$ARCHIVE_FILE")"
+    iecho "Downloaded archive: $ARCHIVE_FILE"
 fi
 
-CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
-iecho "INFO: SHA256 checksum: $CHECKSUM"
+iecho "SHA256 checksum: $CHECKSUM"
 
 # =============================================
 # Optional: generate MXE .mk file
 # =============================================
-if $GENERATE_MXE; then
+if [[ "$GENERATE_MXE" == true ]]; then
     vecho "Generating MXE .mk file..."
     bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
         --pkg "$OWNER_REPO" \

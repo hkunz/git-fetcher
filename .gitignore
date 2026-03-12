@@ -1,4 +1,5 @@
-# git-fetcher temporary/download files
+# Git Fetcher temporary/download files
+downloads/
 *.tar.gz
 log/
 tmp/
@@ -15,4 +16,3 @@ Thumbs.db
 *.swp
 *.swo
 *.bak
-

@@ -28,9 +28,10 @@ download_archive() {
     local file="$2"
 
     mkdir -p "$(dirname "$file")"
-    iecho "Downloading $file from $url..."
+    iecho "Downloading from URL: $url"
+    iecho "Saving to local file: $file"
     curl -L "$url" -o "$file"
-    vecho "Download finished: $file"
+    vecho "Download finished successfully: $file"
 }
 
 # =============================================
@@ -39,11 +40,7 @@ download_archive() {
 # =============================================
 compute_sha256() {
     local file="$1"
-    CHECKSUM=$(sha256sum "$file" | awk '{print $1}')
-    iecho "Checksum computed for $file"
-    iecho
-    iecho "Archive: $file"
-    iecho "SHA256: $CHECKSUM"
+    sha256sum "$file" | awk '{print $1}'
 }
 
 # =============================================
@@ -78,7 +75,7 @@ vecho() {
 # Arguments: $* - message
 # =============================================
 decho() {
-    if [ "$DEBUG" = true ]; then
+    if [ "$DEBUG" = true ] || [ "$OFFLINE" = true ]; then
         echo "[DEBUG] $*"
     fi
 }
