@@ -28,6 +28,7 @@ update_db() {
     local sha="$6"
     local package="$7"
     local description="$8"
+    local build_system="$9"
 
     init_db
     local tmp
@@ -40,7 +41,8 @@ update_db() {
        --arg sha "$sha" \
        --arg package "$package" \
        --arg description "$description" \
-       '.[$url] = {latest_tag: $tag, default_branch: $branch, archive_url: $archive_url, archive: $archive, sha256: $sha, package: $package, description: $description}' \
+       --arg build_system "$build_system" \
+       '.[$url] = {latest_tag: $tag, default_branch: $branch, archive_url: $archive_url, archive: $archive, sha256: $sha, package: $package, description: $description, build_system: $build_system}' \
        "$DB_FILE" > "$tmp"
     mv "$tmp" "$DB_FILE"
 }

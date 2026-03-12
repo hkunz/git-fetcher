@@ -93,6 +93,7 @@ load_from_db() {
     TAG=$(get_entry_field '.latest_tag')
     BRANCH=$(get_entry_field '.default_branch')
     CHECKSUM=$(get_entry_field '.sha256')
+    BUILD_SYSTEM=$(get_entry_field '.build_system')
 }
 
 download_archive_if_needed() {
@@ -109,7 +110,8 @@ download_archive_if_needed() {
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
-    update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION"
+    BUILD_SYSTEM=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
+    update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
 }
 
 # Decide whether to use DB or download
@@ -146,6 +148,7 @@ fi
 
 iecho "Version: $(bold_bright_cyan "$VERSION")"
 iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
+iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 
 # =============================================
 # Optional: generate MXE .mk file
