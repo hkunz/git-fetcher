@@ -75,9 +75,9 @@ if [ -z "$HOST" ]; then
     exit 1
 fi
 
-vecho "Host detected: $HOST"
-vecho "OWNER_REPO: $OWNER_REPO"
-vecho "GIT_URL: $GIT_URL"
+vecho "Detected host: $HOST"
+vecho "Repository (owner/name): $OWNER_REPO"
+vecho "Git URL: $GIT_URL"
 
 # =============================================
 # List branches if requested
@@ -105,11 +105,12 @@ if [[ -n "$entry" && -f $(echo "$entry" | jq -r '.archive') && "$FORCE_DOWNLOAD"
     [ "$TAG" == "null" ] && TAG=""
     BRANCH=$(echo "$entry" | jq -r '.default_branch')
     CHECKSUM=$(echo "$entry" | jq -r '.sha256')
+    iecho "Download URL: $ARCHIVE_URL"
     iecho "Using archive from DB: $ARCHIVE_FILE"
     if [ -n "$TAG" ]; then
         iecho "Latest Tag: $(bold_bright_green "$TAG")"
     else
-        iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag available)"
+        iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag found)"
     fi
 
 else
@@ -133,9 +134,9 @@ else
     ARCHIVE_FILE="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
 
     # Download archive
-    vecho "Downloading archive..."
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ROOT_DIR/downloads/$ARCHIVE_FILE"
+
     PACKAGE_NAME="$(basename "$OWNER_REPO")"
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
@@ -145,9 +146,9 @@ else
     iecho "Downloaded archive: $ARCHIVE_FILE"
 fi
 
-iecho "Downloaded file: $(bold_bright_cyan "$(basename "$ARCHIVE_FILE")")"
-iecho "Package: $(bold_bright_green "$PACKAGE_NAME")"
-[ -n "$DESCRIPTION" ] && iecho "Description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
+iecho "Downloaded archive file: $(bold_bright_cyan "$(basename "$ARCHIVE_FILE")")"
+iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
+[ -n "$DESCRIPTION" ] && iecho "Package Description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
 
 if [ -n "$TAG" ]; then
     # Extract numeric part after optional prefix
