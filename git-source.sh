@@ -93,7 +93,7 @@ fi
 # =============================================
 # Download archive and compute checksum
 # =============================================
-mkdir -p downloads
-ARCHIVE_FILE="downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
+mkdir -p "$ROOT_DIR/downloads"
+ARCHIVE_FILE="$ROOT_DIR/downloads/$(basename "$OWNER_REPO")-$VERSION.tar.gz"
 download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
 compute_sha256 "$ARCHIVE_FILE"

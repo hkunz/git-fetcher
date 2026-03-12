@@ -3,12 +3,11 @@
 
 set -e
 
-# Default prefix used during installation
 PREFIX="/usr/local"
 
-# ----------------------------------------
+# ========================================
 # Parse options
-# ----------------------------------------
+# ========================================
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --prefix)
@@ -28,18 +27,18 @@ done
 
 MANIFEST="$PREFIX/git-source.install-manifest"
 
-# ----------------------------------------
+# ========================================
 # Check for manifest
-# ----------------------------------------
+# ========================================
 if [ ! -f "$MANIFEST" ]; then
     echo "Error: No installation manifest found at $MANIFEST"
     echo "Cannot uninstall without knowing installed files."
     exit 1
 fi
 
-# ----------------------------------------
+# ========================================
 # Remove installed files
-# ----------------------------------------
+# ========================================
 echo "Removing installed files listed in: $MANIFEST"
 while IFS= read -r file; do
     if [ -f "$file" ]; then
@@ -50,21 +49,20 @@ while IFS= read -r file; do
     fi
 done < "$MANIFEST"
 
-# Remove the manifest itself
 rm -f "$MANIFEST"
 echo "Removed manifest: $MANIFEST"
 
-# ----------------------------------------
+# ========================================
 # Optional: update man database
-# ----------------------------------------
+# ========================================
 if command -v mandb >/dev/null 2>&1; then
     echo "Updating man database..."
     mandb >/dev/null 2>&1 || true
 fi
 
-# ----------------------------------------
+# ========================================
 # Summary
-# ----------------------------------------
+# ========================================
 echo
 echo "Uninstallation complete!"
 echo "If you added $PREFIX/bin to your PATH manually, you can remove it if desired."
