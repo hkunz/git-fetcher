@@ -9,6 +9,7 @@ while [[ $# -gt 0 ]]; do
         --pkg) PACKAGE="$2"; shift 2;;
         --version) VERSION="$2"; shift 2;;
         --archive) ARCHIVE="$2"; shift 2;;
+        --archive_url) ARCHIVE_URL="$2"; shift 2;;
         --checksum) CHECKSUM="$2"; shift 2;;
         --test-lang) TEST_LANG="$2"; shift 2;;
         --description) DESCRIPTION="$2"; shift 2;;
@@ -24,7 +25,7 @@ done
 # Required arguments check
 # =============================================
 if [ -z "$PACKAGE" ] || [ -z "$VERSION" ] || [ -z "$ARCHIVE" ] || [ -z "$CHECKSUM" ]; then
-    echo "Usage: $0 --pkg <package> --version <version> --archive <file> --checksum <sha256> [--test-lang <c|cpp>] [--description <text>] [--dependencies <list>]"
+    echo "Usage: $0 --pkg <package> --version <version> --archive_url <url> --archive <file> --checksum <sha256> [--test-lang <c|cpp>] [--description <text>] [--dependencies <list>]"
     exit 1
 fi
 
