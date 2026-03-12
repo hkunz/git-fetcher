@@ -1,5 +1,6 @@
 # Git Fetcher temporary/download files
 downloads/
+generated/
 *.tar.gz
 log/
 tmp/

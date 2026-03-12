@@ -133,16 +133,31 @@ else
 fi
 
 iecho "Downloaded file: $(bold_bright_cyan "$(basename "$ARCHIVE_FILE")")"
+
 if [ -n "$TAG" ]; then
     iecho "Latest Tag: $(bold_bright_cyan "$TAG")"
 else
     iecho "Default Branch: $(bold_bright_cyan "$BRANCH") (No tag available)"
 fi
+
+if [ -n "$TAG" ]; then
+    # Extract numeric part after optional prefix
+    if [[ "$TAG" =~ ([0-9]+(\.[0-9]+)*) ]]; then
+        VERSION="${BASH_REMATCH[1]}"
+    else
+        VERSION="$TAG"
+    fi
+else
+    VERSION="$BRANCH"
+fi
+
+iecho "Version: $(bold_yellow "$VERSION")"
 iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
 
 # =============================================
 # Optional: generate MXE .mk file
 # =============================================
+
 if [[ "$GENERATE_MXE" == true ]]; then
     vecho "Generating MXE .mk file..."
     bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
