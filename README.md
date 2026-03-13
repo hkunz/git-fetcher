@@ -14,7 +14,7 @@ It automates the retrieval of the latest version of a repository, saving archive
 - Supports **GitHub**, **GitLab**, **Bitbucket**, and **Googlesource**.
 - Optional **verbose** and **debug** output.
 - Cross-platform: works anywhere Bash, `curl`, and `git` are available.
-- Automatically generate MXE package (.mk) files from Git repository URLs
+- Automatically generate [MXE](https://github.com/mxe/mxe) package (.mk) files from Git repository URLs
 
 ---
 
