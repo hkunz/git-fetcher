@@ -56,11 +56,22 @@ done
 CMAKE_FLAGS+="\t\t-DCMAKE_BUILD_TYPE=Release"
 
 TMP=$(mktemp)
+
+if [[ "$WEBSITE" == *"github.com"* ]]; then
+    DELETE_GITHUB='/${GITHUB_CONF}/d'
+    DELETE_NON_GITHUB='/${NON_GITHUB}/,+3d'
+else
+    DELETE_GITHUB='/${GITHUB_CONF}/,+1d'
+    DELETE_NON_GITHUB='/${NON_GITHUB}/d'
+fi
+
 echo -e "$CMAKE_FLAGS" > "$TMP"
 sed -e "/\${CMAKE_FLAGS}/{
     r $TMP
     d
 }" \
+-e "$DELETE_GITHUB" \
+-e "$DELETE_NON_GITHUB" \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
 -e "s|\${PACKAGE}|$PACKAGE|g" \
 -e "s|\${WEBSITE}|$WEBSITE|g" \
