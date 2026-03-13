@@ -41,6 +41,10 @@ color_text() {
     echo -e "${color}${text}${COLOR_RESET}"
 }
 
+color_reset() {
+    echo -e "${COLOR_RESET}"
+}
+
 # =============================================
 # Convenience wrappers: Normal colors
 # =============================================

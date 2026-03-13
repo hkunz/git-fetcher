@@ -36,8 +36,8 @@ print_usage() {
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -b|--list-branches) LIST_BRANCHES=true ;;
-        -v|--verbose) VERBOSE=true ;;
-        --debug) DEBUG=true ;;
+        -v|--verbose) export VERBOSE=true ;;
+        --debug) export DEBUG=true ;;
         --generate-mxe-makefile) GENERATE_MXE=true ;;
         --force) FORCE_DOWNLOAD=true ;;
         -h|--help) print_usage; exit 0 ;;
@@ -110,7 +110,8 @@ download_archive_if_needed() {
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
-    BUILD_SYSTEM=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
+    JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
+    BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
     update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
 }
 
@@ -154,6 +155,63 @@ iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 # Optional: generate MXE .mk file
 # =============================================
 if [[ "$GENERATE_MXE" == true ]]; then
+
+    JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
+    BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
+    MAIN_FILE=$(echo "$JSON_OUTPUT" | jq -r '.main_file')
+    OTHER_FILES=$(echo "$JSON_OUTPUT" | jq -r '.other_files[]')
+
+    iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
+    vecho "Other Build System Files:\n$OTHER_FILES"
+
+    TMP_DIR="$ROOT_DIR/tmp"
+    mkdir -p "$TMP_DIR"
+    tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --overwrite "$MAIN_FILE"
+    FILE="$TMP_DIR/$MAIN_FILE"
+
+    BUILD_OPTIONS=""
+
+    if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
+        # Extract OPTION() variables and defaults
+        while read -r line; do
+            name=$(echo "$line" | awk '{print $1}')
+            default=$(echo "$line" | awk '{print $NF}')
+            BUILD_OPTIONS+=" ${name}=${default}"
+        done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$FILE")
+
+    elif [[ "$BUILD_SYSTEM" == "Meson" ]]; then
+        # For Meson, look for meson_options.txt in the same dir as main file
+        MESON_FILE_DIR=$(dirname "$FILE")
+        MESON_OPTIONS_FILE="$MESON_FILE_DIR/meson_options.txt"
+
+        if [[ -f "$MESON_OPTIONS_FILE" ]]; then
+            while read -r line; do
+                # Extract option name
+                name=$(echo "$line" | grep -Po "(?<=option\(')[^']+")
+                # Extract default value
+                default=$(echo "$line" | grep -Po "(?<=value: )[^,]+")
+                # Normalize booleans to ON/OFF
+                if [[ "$default" == "true" ]]; then
+                    default="ON"
+                elif [[ "$default" == "false" ]]; then
+                    default="OFF"
+                fi
+                BUILD_OPTIONS+=" -D${name}=${default}"
+            done < <(grep "option(" "$MESON_OPTIONS_FILE")
+        else
+            vecho "Warning: Meson options file not found at $MESON_OPTIONS_FILE"
+        fi
+
+    else
+        vecho "Warning: Build system '$BUILD_SYSTEM' not handled automatically"
+    fi
+
+    echo " ==== Build options: $BUILD_OPTIONS"
+
+    # Cleanup temporary extraction
+    #rm -rf "$TMP_DIR"
+
+    # Call MXE .mk generator
     bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
         --pkg "$PACKAGE_NAME" \
         --version "$VERSION" \
@@ -161,5 +219,32 @@ if [[ "$GENERATE_MXE" == true ]]; then
         --archive "$ARCHIVE_FILE" \
         --checksum "$CHECKSUM" \
         --description "$DESCRIPTION" \
+        --website "$GIT_URL" \
+        --build-system "$BUILD_SYSTEM" \
+        --build-options "$BUILD_OPTIONS" \
         --test-lang "cpp"
+
 fi
+
+
+# installing the Code Llama AI engine
+
+# sudo apt update
+# sudo apt install python3.12-venv
+# python3 -m venv ~/codellama-venv
+# source ~/codellama-venv/bin/activate # run this whenever you start a new terminal session
+# pip install --upgrade pip
+# pip install torch transformers accelerate sentencepiece  # This combined is the AI engine / runtime
+
+# torch - the neural network engine (PyTorch created by Meta now used by almost everyone)
+# transformers - loads and runs LLM models (Hugging Face Transformers support thousands of models)
+# accelerate - helps with GPU/CPU optimization (Hugging Face Accelerate)
+# sentencepiece	- tokenizer used by Llama models created by Google
+
+# install the 7B model weights (~5GB)
+
+# mkdir -p ~/models
+# cd ~/models
+# git lfs install
+# git clone https://huggingface.co/codellama/CodeLlama-7b-hf  # These contain the trained neural network weights.
+

@@ -13,6 +13,9 @@ while [[ $# -gt 0 ]]; do
         --checksum) CHECKSUM="$2"; shift 2;;
         --test-lang) TEST_LANG="$2"; shift 2;;
         --description) DESCRIPTION="$2"; shift 2;;
+        --website) WEBSITE="$2"; shift 2;;
+        --build-system) BUILD_SYSTEM="$2"; shift 2;;
+        --build-options) BUILD_SYSTEM="$2"; shift 2;;
         *)
             echo "[ERROR] Unknown option: $1"
             echo "Usage: $0 --pkg <package> --version <version> --archive <file> --checksum <sha256> [--test-lang <c|cpp>] [--description <text>]"
