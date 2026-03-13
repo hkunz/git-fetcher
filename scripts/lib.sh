@@ -61,29 +61,35 @@ iecho() {
 }
 
 # =============================================
-# Print verbose messages
-# Arguments: $* - message
+# General message printer with optional prefix and conditional printing
+# Arguments:
+#   $1 - variable name to check (VERBOSE, DEBUG, or special "ALWAYS")
+#   $2 - prefix (e.g., "[VERBOSE]", "[DEBUG]", "[ERROR]")
+#   $3..$n - message
+#   optional flag: --no-prefix
 # =============================================
-vecho() {
-    if [ "$VERBOSE" = true ]; then
-        echo "[VERBOSE] $*"
+_msg() {
+    local var_name="$1"
+    local prefix="$2"
+    shift 2
+
+    local no_prefix=false
+    if [[ "$1" == "--no-prefix" ]]; then
+        no_prefix=true
+        shift
+    fi
+
+    if [[ "$var_name" == "ALWAYS" ]] || [[ "${!var_name}" == true ]]; then
+        [[ "$no_prefix" == true ]] && echo "$*" >&2 || echo "$prefix $*" >&2
     fi
 }
 
 # =============================================
-# Print debug messages
-# Arguments: $* - message
-# =============================================
-decho() {
-    if [ "$DEBUG" = true ] || [ "$OFFLINE" = true ]; then
-        echo "[DEBUG] $*"
-    fi
-}
+# Verbose message
+vecho() { _msg VERBOSE "[VERBOSE]" "$@"; }
 
-# =============================================
-# Print error messages
-# Arguments: $* - message
-# =============================================
-eecho() {
-    echo "[ERROR] $*" >&2
-}
+# Debug message
+decho() { _msg DEBUG "[DEBUG]" "$@"; }
+
+# Error message (always prints, to stderr)
+eecho() { _msg ALWAYS "[ERROR]" "$@"; }

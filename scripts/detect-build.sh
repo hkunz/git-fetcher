@@ -42,6 +42,7 @@ FOUND_PATHS=""
 if FOUND_PATHS=$(grep 'meson\.build$' <<< "$FILE_LIST"); then
     BUILD_SYSTEM="Meson"
     MESON_HELPERS=$(grep 'meson_options\.txt$' <<< "$FILE_LIST" || true)
+    OPTIONS_FILE=$(grep 'meson_options\.txt$' <<< "$FILE_LIST" | head -n1 || true)
     FOUND_PATHS=$(printf "%s\n%s" "$FOUND_PATHS" "$MESON_HELPERS" | sed '/^$/d')
 
 elif FOUND_PATHS=$(grep 'CMakeLists\.txt$' <<< "$FILE_LIST"); then
@@ -83,5 +84,6 @@ fi
 jq -n \
     --arg build_system "$BUILD_SYSTEM" \
     --arg main_file "$MAIN_FILE" \
+    --arg options_file "$OPTIONS_FILE" \
     --argjson other_files "$(printf '%s\n' "$OTHER_FILES" | jq -R -s -c 'split("\n")[:-1]')" \
-    '{build_system: $build_system, main_file: $main_file, other_files: $other_files}'
+    '{build_system: $build_system, main_file: $main_file, options_file: $options_file, other_files: $other_files}'

@@ -14,6 +14,7 @@ It automates the retrieval of the latest version of a repository, saving archive
 - Supports **GitHub**, **GitLab**, **Bitbucket**, and **Googlesource**.
 - Optional **verbose** and **debug** output.
 - Cross-platform: works anywhere Bash, `curl`, and `git` are available.
+- Automatically generate MXE package (.mk) files from Git repository URLs
 
 ---
 
@@ -21,13 +22,13 @@ It automates the retrieval of the latest version of a repository, saving archive
 
 The following tools must be installed for `git-source` to work properly:
 
-- **bash** – The scripts are written in Bash. Most Linux/macOS systems include this by default.
-- **git** – Needed to fetch repository info, list branches, and for `fetch_latest_*` functions.
-- **jq** – Required to read/write the JSON database safely. Must be installed separately.
-- **curl** or **wget** – Used by `download_archive` to fetch files from URLs.
-- **sha256sum** – Used to compute checksums. On macOS, this may be `shasum -a 256`.
-- **make** – Needed if building packages locally or running MXE build commands.
-- **MXE toolchain** (optional) – Only required if you plan to generate `.mk` files and build packages.
+- `bash` – The scripts are written in Bash. Most Linux/macOS systems include this by default.
+- `git` – Needed to fetch repository info, list branches, and for `fetch_latest_*` functions.
+- `jq` – Required to read/write the JSON database safely. Must be installed separately.
+- `curl` or **wget** – Used by `download_archive` to fetch files from URLs.
+- `sha256sum` – Used to compute checksums. On macOS, this may be `shasum -a 256`.
+- `make` – Needed if building packages locally or running MXE build commands.
+- `MXE toolchain` (optional) – Only required if you plan to generate `.mk` files and build packages.
 
 ## Installation
 
@@ -86,3 +87,77 @@ To remove installed files, use the `uninstall.sh` script with the same prefix yo
 ```
 
 Note: Uninstallation does not affect other system-wide tools or Git repositories you manage. It only removes the installed wrapper, symlink, and `man` page.
+
+## A.I. Automation
+
+### installing the Code Llama AI engine
+
+```bash
+$ sudo apt update
+$ sudo apt install python3.12-venv
+$ python3 -m venv ~/codellama-venv
+$ source ~/codellama-venv/bin/activate # run this whenever you start a new terminal session
+$ pip install --upgrade pip
+$ pip install torch transformers accelerate sentencepiece  # This combined is the AI engine / runtime
+```
+
+* `torch` - the neural network engine (PyTorch created by Meta now used by almost everyone)
+* `transformers` - loads and runs LLM models (Hugging Face Transformers support thousands of models)
+* `accelerate` - helps with GPU/CPU optimization (Hugging Face Accelerate)
+* `sentencepiece` - tokenizer used by Llama models created by Google
+
+### install the 7B model weights (~27GB)
+
+```bash
+$ mkdir -p ~/models
+$ cd ~/models
+$ git lfs install
+$ git clone https://huggingface.co/codellama/CodeLlama-7b-hf  # These contain the trained neural network weights.
+```
+
+### Test A.I.
+
+```python
+import sys
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+model_path = "/home/a/models/CodeLlama-7b-hf"
+
+# -----------------------------------------
+# Get prompt from command line argument
+# -----------------------------------------
+if len(sys.argv) < 2:
+    print("Usage: python test_codellama.py \"your prompt here\"")
+    sys.exit(1)
+
+prompt = sys.argv[1]
+
+print("Loading tokenizer...")
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+
+print("Loading model (this may take a while)...")
+model = AutoModelForCausalLM.from_pretrained(
+    model_path,
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+print("Model loaded!")
+
+inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+output = model.generate(
+    **inputs,
+    max_new_tokens=200
+)
+
+print("\nAI response:\n")
+print(tokenizer.decode(output[0], skip_special_tokens=True))
+```
+
+### Sample Usage:
+
+```bash
+python test_codellama.py "Hi how are you?"
+```
