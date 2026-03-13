@@ -155,85 +155,14 @@ iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 # Optional: generate MXE .mk file
 # =============================================
 if [[ "$GENERATE_MXE" == true ]]; then
-
-    JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
-    BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
-    MAIN_FILE=$(echo "$JSON_OUTPUT" | jq -r '.main_file')
-    OPTIONS_FILE=$(echo "$JSON_OUTPUT" | jq -r '.options_file')
-    OTHER_FILES=$(echo "$JSON_OUTPUT" | jq -r '.other_files[]')
-    decho "Build Detection Json Output: $JSON_OUTPUT"
-    iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
-    decho "Options File: $(bold_bright_cyan "$OPTIONS_FILE")"
-
-    TMP_DIR="$ROOT_DIR/tmp"
-    mkdir -p "$TMP_DIR"
-
-    # -------------------------------
-    # Extract all main + other files
-    # -------------------------------
-    FOUND_FILES=("$MAIN_FILE")
-    while IFS= read -r f; do
-        FOUND_FILES+=("$f")
-    done <<< "$OTHER_FILES"
-
-    for f in "${FOUND_FILES[@]}"; do
-        if tar -tf "$ARCHIVE_FILE" | grep -q "^$f\$"; then
-            tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --overwrite "$f"
-        else
-            vecho "Warning: $f not found in archive"
-        fi
-    done
-
-    BUILD_OPTIONS=""
-    # -------------------------------
-    # Parse build options
-    # -------------------------------
-    if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
-        # Loop through all extracted CMake files
-        for FILE in $FOUND_FILES; do
-            FULL_PATH="$TMP_DIR/$FILE"
-            while read -r line; do
-                name=$(echo "$line" | awk '{print $1}')
-                default=$(echo "$line" | awk '{print $NF}')
-                BUILD_OPTIONS+=" ${name}=${default}"  # tested with https://github.com/alembic/alembic/
-            done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$FULL_PATH")
-        done
-
-    elif [[ "$BUILD_SYSTEM" == "Meson" ]]; then
-        if [[ -n "$OPTIONS_FILE" ]]; then
-            FULL_PATH="$TMP_DIR/$OPTIONS_FILE"
-            COLLAPSED=$(awk 'BEGIN { ORS=""; inblock=0 } {gsub(/[[:space:]]+/, " ") } /^option\(/ {inblock=1; printf "%s", $0; next} inblock {printf " %s", $0} /\)/ && inblock {print ""; inblock=0}' "$FULL_PATH") # tested with https://github.com/Netflix/vmaf/
-            decho "Raw Options: ${COLLAPSED:0:100}"
-            BUILD_OPTIONS=$(echo "$COLLAPSED" | sed 's/option(/\noption(/g' | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" | tr '\n' ' ')
-        fi
-    else
-        vecho "Warning: Build system '$BUILD_SYSTEM' not handled automatically"
-    fi
-
-    decho "Build options: {"
-    for opt in $BUILD_OPTIONS; do
-        decho --no-prefix "  $opt"
-    done
-    decho --no-prefix "}"
-
-    # -------------------------------
-    # Cleanup temporary extraction
-    # -------------------------------
-    rm -rf "$TMP_DIR"
-
-    # -------------------------------
-    # Call MXE .mk generator
-    # -------------------------------
-    bash "$ROOT_DIR/mxe/scripts/generate_mxe_mk.sh" \
+    bash "$SCRIPT_DIR/generate_mxe.sh" \
+        --owner_repo "$OWNER_REPO" \
+        --archive "$ARCHIVE_FILE" \
         --pkg "$PACKAGE_NAME" \
         --version "$VERSION" \
         --archive_url "$ARCHIVE_URL" \
-        --archive "$ARCHIVE_FILE" \
         --checksum "$CHECKSUM" \
         --description "$DESCRIPTION" \
         --website "$GIT_URL" \
-        --build-system "$BUILD_SYSTEM" \
-        --build-options "$BUILD_OPTIONS" \
-        --test-lang "cpp"
-
+        --debug
 fi

@@ -8,7 +8,12 @@ $(PKG)_DESCR	:= ${DESCRIPTION}
 $(PKG)_VERSION	:= ${VERSION}
 $(PKG)_IGNORE	:= ${IGNORE}
 $(PKG)_CHECKSUM	:= ${CHECKSUM}
-${GH_CONF_OR_URL}
+${GITHUB_CONF}
+$(PKG)_GH_CONF 	:= ${OWNER_REPO}/tags,v
+${NON_GITHUB}
+$(PKG)_URL		:= https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
+$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)  # folder name after extracting archive
+$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz  # downloaded archive file name
 $(PKG)_DEPS		:= ${DEPENDENCIES}
 
 define $(PKG)_BUILD
@@ -18,8 +23,7 @@ define $(PKG)_BUILD
 		-DCMAKE_INSTALL_PREFIX='$(PREFIX)/$(TARGET)' \
 		-DCMAKE_PREFIX_PATH='$(PREFIX)/$(TARGET)' \
 		-DBUILD_SHARED_LIBS=$(CMAKE_SHARED_BOOL) \
-		-DCMAKE_BUILD_TYPE=Release \
-		$(CMAKE_FLAGS)
+${CMAKE_FLAGS}
 
 	# build cmake package and install
 	$(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
