@@ -1,6 +1,8 @@
 # This file is part of MXE. See LICENSE.md for licensing information.
 
+# BEGIN_INCLUDE
 include src/common/pkgutils.mk
+# END_INCLUDE
 
 PKG				:= ${PACKAGE}
 $(PKG)_WEBSITE	:= ${WEBSITE}
@@ -50,11 +52,12 @@ ${BUILD_OPTIONS_MULTILINE}
 	# Build package and install
 # END_OTHER_BUILD_SYSTEM
 
+# BEGIN_PC_FILE
 	# Only needed if the project does not ship a .pc file
 	# $(call GENERATE_PC, \
 	#	$(PREFIX)/$(TARGET), \
 	#	$(PKG), \
-	#	${DESCRIPTION}, \
+	#	$($(PKG)_DESCR), \
 	#	$($(PKG)_VERSION), \
 	#	${REQUIRES}, \
 	#	${REQUIRES_PRIVATE}, \
@@ -63,6 +66,7 @@ ${BUILD_OPTIONS_MULTILINE}
 	#	${CFLAGS}, \
 	#	${CFLAGS_PRIVATE}, \
 	# )
+# END_PC_FILE
 
 	# compile a test program to verify the library is usable
 	'$(TARGET)-g++' '$(TEST_FILE)' \

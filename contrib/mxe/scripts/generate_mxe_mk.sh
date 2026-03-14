@@ -72,6 +72,7 @@ BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
 MAIN_FILE=$(echo "$JSON_OUTPUT" | jq -r '.main_file')
 OPTIONS_FILE=$(echo "$JSON_OUTPUT" | jq -r '.options_file')
 OTHER_FILES=$(echo "$JSON_OUTPUT" | jq -r '.other_files[]?')
+PC_FILE=$(echo "$JSON_OUTPUT" | jq -r '.pc_file')
 
 decho "Build Detection JSON Output: $JSON_OUTPUT"
 iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
@@ -84,6 +85,8 @@ mkdir -p "$TMP_DIR"
 # Extract main + other files
 # =============================================
 FOUND_FILES=("$MAIN_FILE")
+[[ -n "$OPTIONS_FILE" ]] && FOUND_FILES+=("$OPTIONS_FILE") 
+[[ -n "$PC_FILE" ]] && FOUND_FILES+=("$PC_FILE")   # <-- add this
 while IFS= read -r f; do
     FOUND_FILES+=("$f")
 done <<< "$OTHER_FILES"
@@ -127,7 +130,7 @@ decho --no-prefix "}"
 # =============================================
 # Cleanup temporary extraction
 # =============================================
-rm -rf "$TMP_DIR"
+# rm -rf "$TMP_DIR"
 
 # =============================================
 # Defaults
@@ -171,9 +174,17 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
+if [[ -n "$PC_FILE" && -s "$TMP_DIR/$PC_FILE" ]]; then
+    vecho "PC file exists and is not empty: $PC_FILE"
+    DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
+    DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
+fi
+
 sed \
 ${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
 ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
+${DELETE_PC_BLOCK:+-e "$DELETE_PC_BLOCK"} \
+${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
 -e "s|\${PACKAGE}|$PACKAGE_NAME|g" \
 -e "s|\${WEBSITE}|$GIT_URL|g" \
@@ -192,6 +203,10 @@ ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 -e "/# END_MESON/d" \
 -e "/# BEGIN_OTHER_BUILD_SYSTEM/d" \
 -e "/# END_OTHER_BUILD_SYSTEM/d" \
+-e "/# BEGIN_INCLUDE/d" \
+-e "/# END_INCLUDE/d" \
+-e "/# BEGIN_PC_FILE/d" \
+-e "/# END_PC_FILE/d" \
 "$TEMPLATE" > "$OUTPUT_FILE"
 
 # inserting a multiline block of build options via temporary file to work around sed's inability to handle multiline replacements
@@ -223,7 +238,6 @@ if [[ "$TEST_LANG" == "cpp" ]]; then
 #include <cstdint>
 #include <cstring>"
 else
-    # For C, or other languages, you can define different includes
     export INCLUDES="#include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>

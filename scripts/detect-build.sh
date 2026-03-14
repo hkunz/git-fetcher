@@ -26,10 +26,10 @@ fi
 # Get file list from archive (no extraction)
 # ------------------------------
 case "$ARCHIVE" in
-    *.tar.gz|*.tgz) FILE_LIST=$(tar -tzf "$ARCHIVE") ;;
-    *.tar.xz)       FILE_LIST=$(tar -tJf "$ARCHIVE") ;;
-    *.tar.bz2)      FILE_LIST=$(tar -tjf "$ARCHIVE") ;;
-    *.zip)          FILE_LIST=$(unzip -Z1 "$ARCHIVE") ;;
+    *.tar.gz|*.tgz) CMD=(tar -tzf "$ARCHIVE") ;;
+    *.tar.xz)       CMD=(tar -tJf "$ARCHIVE") ;;
+    *.tar.bz2)      CMD=(tar -tjf "$ARCHIVE") ;;
+    *.zip)          CMD=(unzip -Z1 "$ARCHIVE") ;;
     *) echo "Unknown archive format" >&2; exit 1 ;;
 esac
 
@@ -37,45 +37,51 @@ esac
 # Detect build system and collect paths
 # ------------------------------
 BUILD_SYSTEM="Unknown"
-FOUND_PATHS=""
+FOUND_PATHS=()
+OPTIONS_FILE=""
+PC_FILE=""
+MAIN_CANDIDATE=""
 
-if FOUND_PATHS=$(grep 'meson\.build$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="Meson"
-    MESON_HELPERS=$(grep 'meson_options\.txt$' <<< "$FILE_LIST" || true)
-    OPTIONS_FILE=$(grep 'meson_options\.txt$' <<< "$FILE_LIST" | head -n1 || true)
-    FOUND_PATHS=$(printf "%s\n%s" "$FOUND_PATHS" "$MESON_HELPERS" | sed '/^$/d')
-
-elif FOUND_PATHS=$(grep 'CMakeLists\.txt$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="CMake"
-    CMAKE_HELPERS=$(grep '\.cmake$' <<< "$FILE_LIST" || true)
-    FOUND_PATHS=$(printf "%s\n%s" "$FOUND_PATHS" "$CMAKE_HELPERS" | sed '/^$/d')
-
-elif FOUND_PATHS=$(grep 'configure$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="Autotools"
-
-elif FOUND_PATHS=$(grep 'Makefile$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="Makefile"
-
-elif FOUND_PATHS=$(grep 'pyproject\.toml$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="Python"
-
-elif FOUND_PATHS=$(grep 'Cargo\.toml$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="Rust"
-
-elif FOUND_PATHS=$(grep 'go\.mod$' <<< "$FILE_LIST"); then
-    BUILD_SYSTEM="Go"
-fi
+while IFS= read -r file; do
+    case "$file" in
+       */meson.build|meson.build)
+            BUILD_SYSTEM="Meson"
+            FOUND_PATHS+=("$file")
+            [[ -z "$MAIN_CANDIDATE" || "$(awk -F/ '{print NF}' <<< "$file")" -lt "$(awk -F/ '{print NF}' <<< "$MAIN_CANDIDATE")" ]] && MAIN_CANDIDATE="$file" ;;
+        */meson_options.txt|meson_options.txt)
+            OPTIONS_FILE="$file"
+            FOUND_PATHS+=("$file") ;;
+        */CMakeLists.txt|CMakeLists.txt)
+            BUILD_SYSTEM="CMake"
+            FOUND_PATHS+=("$file")
+            [[ -z "$MAIN_CANDIDATE" ]] && MAIN_CANDIDATE="$file" ;;
+        *.cmake)
+            FOUND_PATHS+=("$file") ;;
+        */configure|configure)
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Autotools" ;;
+        */Makefile|Makefile)
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Makefile" ;;
+        */pyproject.toml|pyproject.toml)
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Python" ;;
+        */Cargo.toml|Cargo.toml)
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Rust" ;;
+        */go.mod|go.mod)
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Go" ;;
+        *.pc|*.pc.in)
+            [[ -z "$PC_FILE" ]] && PC_FILE="$file" ;;
+    esac
+done < <("${CMD[@]}")
 
 # ------------------------------
 # Determine main file (shallowest path)
 # ------------------------------
-MAIN_FILE=""
-OTHER_FILES=""
+MAIN_FILE="$MAIN_CANDIDATE"
+OTHER_FILES=()
 
-if [[ -n "$FOUND_PATHS" ]]; then
-    # Sort by number of '/' (depth) and pick first as main
-    MAIN_FILE=$(echo "$FOUND_PATHS" | awk -F/ '{print NF, $0}' | sort -n | cut -d' ' -f2- | head -n1)
-    OTHER_FILES=$(echo "$FOUND_PATHS" | grep -vF "$MAIN_FILE" || true)
+if [[ ${#FOUND_PATHS[@]} -gt 0 ]]; then
+    # Sort by path depth, excluding MAIN_FILE
+    mapfile -t sorted < <(printf "%s\n" "${FOUND_PATHS[@]}" | grep -vF "$MAIN_FILE" | awk -F/ '{print NF, $0}' | sort -n | cut -d' ' -f2-)
+    OTHER_FILES=("${sorted[@]}")
 fi
 
 # ------------------------------
@@ -85,5 +91,6 @@ jq -n \
     --arg build_system "$BUILD_SYSTEM" \
     --arg main_file "$MAIN_FILE" \
     --arg options_file "$OPTIONS_FILE" \
-    --argjson other_files "$(printf '%s\n' "$OTHER_FILES" | jq -R -s -c 'split("\n")[:-1]')" \
-    '{build_system: $build_system, main_file: $main_file, options_file: $options_file, other_files: $other_files}'
+    --arg pc_file "$PC_FILE" \
+    --argjson other_files "$(printf '%s\n' "${OTHER_FILES[@]}" | jq -R -s -c 'split("\n")[:-1]')" \
+    '{build_system: $build_system, main_file: $main_file, options_file: $options_file, pc_file: $pc_file, other_files: $other_files}'
