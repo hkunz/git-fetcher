@@ -1,0 +1,7 @@
+Test Repositories:
+
+https://go.googlesource.com/scratch - Unsupported build system
+https://github.com/keepassx/keepassx.git - CMake
+https://aomedia.googlesource.com/aom/ - CMake
+https://github.com/alembic/alembic - CMake
+https://github.com/Netflix/vmaf - Meson

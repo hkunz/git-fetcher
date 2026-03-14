@@ -2,79 +2,70 @@
 
 include src/common/pkgutils.mk
 
-pkg				:= libname
-$(PKG)_WEBSITE	:= https://github.com/repository/libname
-$(PKG)_DESCR	:= Example C++ library for MXE package template
-$(PKG)_VERSION	:= 1.2.3  # example tag version; use 'master' or 'main' if the project has no tags or fork project and create a tag
-$(PKG)_CHECKSUM	:= XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-# GitHub-hosted packages: (remove if not GitHub-hosted)
-$(PKG)_GH_CONF 	:= repository/libname/tags,v  # Git-style tag path; keep ',v' only if the repository prepends 'v' to tags (e.g., v1.2.3)
-
-# Non-GitHub packages: (remove the following 3 lines if GitHub-hosted)
-$(PKG)_URL		:= https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
-$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)  # folder name after extracting archive
-$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz  # downloaded archive file name
-
-$(PKG)_DEPS		:= cc libname1 libname2 libname3
+PKG				:= ${PACKAGE}
+$(PKG)_WEBSITE	:= ${WEBSITE}
+$(PKG)_DESCR	:= ${DESCRIPTION}
+$(PKG)_VERSION	:= ${VERSION}
+$(PKG)_IGNORE	:= ${IGNORE}
+$(PKG)_CHECKSUM	:= ${CHECKSUM}
+# BEGIN_GITHUB
+$(PKG)_GH_CONF 	:= ${OWNER_REPO}/tags,v
+# END_GITHUB
+# BEGIN_NON_GITHUB
+$(PKG)_URL		:= ${ARCHIVE_URL}
+$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)
+$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz
+# END_NON_GITHUB
+$(PKG)_DEPS		:= ${DEPENDENCIES}
 
 define $(PKG)_BUILD
 
-	# =========================================================================
-	# Build with CMake (Remove this block if the project does not use CMake)
-	# =========================================================================
-	cd "$(BUILD_DIR)" && \
-		'$(TARGET)-cmake' "$(SOURCE_DIR)" \
-			-DCMAKE_INSTALL_PREFIX='$(PREFIX)/$(TARGET)' \
-			-DCMAKE_PREFIX_PATH='$(PREFIX)/$(TARGET)' \
-			-DBUILD_SHARED_LIBS=$(CMAKE_SHARED_BOOL) \
-			-DCMAKE_BUILD_TYPE=Release \
+# BEGIN_CMAKE
+	# configure package with cmake
+	cd "$(BUILD_DIR)" && '$(TARGET)-cmake' "$(SOURCE_DIR)" \
+		-DCMAKE_INSTALL_PREFIX='$(PREFIX)/$(TARGET)' \
+		-DCMAKE_PREFIX_PATH='$(PREFIX)/$(TARGET)' \
+		-DBUILD_SHARED_LIBS=$(CMAKE_SHARED_BOOL) \
+${BUILD_OPTIONS_MULTILINE}
 
+	# build cmake package and install
 	$(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
 	$(MAKE) -C '$(BUILD_DIR)' -j 1 install
-
-	# =========================================================================
-	# Build with Meson (Remove this block if the project does not use Meson)
-	# =========================================================================
+# END_CMAKE
+# BEGIN_MESON
+	# configure package with meson
 	'$(MXE_MESON_WRAPPER)' $(MXE_MESON_OPTS) \
-		-Denable_example_flag1=true \
-		-Denable_example_flag2=false \
-		'$(BUILD_DIR)' '$(SOURCE_DIR)/libname'
+		-Dprefix=/usr/local \
+		-Dlibdir=lib \
+		-Dbindir=bin
+${BUILD_OPTIONS_MULTILINE}
+		'$(BUILD_DIR)' '$(SOURCE_DIR)/$(PKG)'
 
+	# build meson package and install
 	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j '$(JOBS)'
 	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j 1 install
+# END_MESON
+# BEGIN_OTHER_BUILD_SYSTEM
+    # Configure package
+	# Build package and install
+# END_OTHER_BUILD_SYSTEM
 
-	# =========================================================================
-	# Optional: add support for other build systems here
-	# =========================================================================
-
-	# ==============================================================
-	# Generate pkg-config (.pc) file (see src/common/pkgutils.mk)
-	# ==============================================================
 	# Only needed if the project does not ship a .pc file
-	# Example:
 	# $(call GENERATE_PC, \
 	#	$(PREFIX)/$(TARGET), \
-	#	libname, \
-	#	Library description here, \
+	#	$(PKG), \
+	#	${DESCRIPTION}, \
 	#	$($(PKG)_VERSION), \
-	#	libjpeg libpng, \
-	#	, \
-	#	-lsjpeg -ljpeg -lpng, \
+	#	${REQUIRES}, \
+	#	${REQUIRES_PRIVATE}, \
+	#	${LIBS}, \
+	#	${LIBS_PRIVATE}, \
+	#	${CFLAGS}, \
+	#	${CFLAGS_PRIVATE}, \
 	# )
 
-	# ==============================================================
-	# Compile a test program to verify the library is usable
-	# ==============================================================
+	# compile a test program to verify the library is usable
 	'$(TARGET)-g++' '$(TEST_FILE)' \
 		-o '$(PREFIX)/$(TARGET)/bin/test-$(PKG).exe' \
-		`$(TARGET)-pkg-config libname --cflags --libs`
+		`$(TARGET)-pkg-config $(PKG) --cflags --libs`
 endef
-
-# ================================
-# Optional patch example
-# ================================
-# Use before running make
-# tmpfile=$(mktemp) || exit 1
-# $(SED) 's/search_str/replace_str/' "$(SOURCE_DIR)/CMakeLists.txt" > "$tmpfile" && mv "$tmpfile" "$(SOURCE_DIR)/CMakeLists.txt"
-# Recommended: use a .patch file for reproducible builds

@@ -45,7 +45,7 @@ TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
 # =============================================
 # Generate .mk file
 # =============================================
-TEMPLATE="$MXE_ROOT/templates/cmake.template.mk"
+TEMPLATE="$MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_FILE="$OUTPUT_DIR/$PACKAGE.mk"
 IGNORE=""
 
