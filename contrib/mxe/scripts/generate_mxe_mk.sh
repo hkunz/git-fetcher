@@ -79,81 +79,68 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 
 [[ -n "$OPTIONS_FILE" ]] && iecho "Options File: $(bold_bright_cyan "$OPTIONS_FILE")"
 
+# =============================================
+# Extract the entire archive
+# =============================================
 mkdir -p "$TMP_DIR"
+tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR"
+
+# Detect top-level folder (source root)
+TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)
+SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
+
+# Out-of-source build folder for CMake
+TMP_BUILD_DIR="$SOURCE_ROOT/build"
+
+decho "Extracted source to: $SOURCE_ROOT"
+decho "CMake build folder: $TMP_BUILD_DIR"
 
 # =============================================
-# Extract main + other files
+# Query CMake for all real options
 # =============================================
-FOUND_FILES=("$MAIN_FILE")
-[[ -n "$OPTIONS_FILE" ]] && FOUND_FILES+=("$OPTIONS_FILE") 
-[[ -n "$PC_FILE" ]] && FOUND_FILES+=("$PC_FILE")   # <-- add this
-while IFS= read -r f; do
-    FOUND_FILES+=("$f")
-done <<< "$OTHER_FILES"
+query_mxe_cmake_options() {
+    local src_dir="$1"
+    local build_dir="$2"
 
-for f in "${FOUND_FILES[@]}"; do
-    if tar -tf "$ARCHIVE_FILE" | grep -q "^$f\$"; then
-        tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --overwrite "$f"
-    else
-        wecho "$f not found in archive"
-    fi
-done
+    mkdir -p "$build_dir"
+    cd "$build_dir" || return 1
 
-# =============================================
-# Parse build options from a single file
-# =============================================
-parse_build_options() {
-    local full_path="$1"
+    # Configure to populate cache
+    cmake "$src_dir" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null || true
 
-    # OPTION(...) statements
-    while read -r line; do
-        name=$(echo "$line" | awk '{print $1}')
-        default=$(echo "$line" | awk '{print $NF}')
-        BUILD_OPTIONS+=" ${name}=${default}"  # preserve original CMake parsing
-    done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$full_path")
+    # Only user-configurable options: BOOL and project-specific STRING/PATH
+    mapfile -t BUILD_OPTIONS < <(
+        cmake -LAH "$build_dir" \
+        | grep -E '^[A-Z0-9_]+:BOOL=' \
+        | sed 's/:.*=/=/'
+    )
 
-    # set_aom_*_var(...) statements
-    while read -r line; do
-        name=$(echo "$line" | awk '{print $1}')
-        default=$(echo "$line" | awk '{print $2}')
-        BUILD_OPTIONS+=" ${name}=${default}"
-    done < <(grep -Po '^\s*set_aom_(config|option|detect)_var\(\s*\K[A-Z0-9_]+\s+[0-9ONF]+' "$full_path")
-}
+    # Deduplicate
+    BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | sort -u))
 
-# =============================================
-# Parse important files for build options
-# =============================================
-parse_all_files() {
-    BUILD_OPTIONS=""
-
-    if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
-        for FILE in "${FOUND_FILES[@]}"; do
-            FULL_PATH="$TMP_DIR/$FILE"
-            parse_build_options "$FULL_PATH"
-        done
-
-    elif [[ "$BUILD_SYSTEM" == "Meson" && -n "$OPTIONS_FILE" ]]; then
-        FULL_PATH="$TMP_DIR/$OPTIONS_FILE"
-        COLLAPSED=$(awk 'BEGIN { ORS=""; inblock=0 } {gsub(/[[:space:]]+/, " ") } /^option\(/ {inblock=1; printf "%s", $0; next} inblock {printf " %s", $0} /\)/ && inblock {print ""; inblock=0}' "$FULL_PATH")
-        decho "Raw Options: ${COLLAPSED:0:100}"
-        BUILD_OPTIONS=$(echo "$COLLAPSED" | sed 's/option(/\noption(/g' | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" | tr '\n' ' ')
-    else
-        wecho "Build system '$BUILD_SYSTEM' not handled automatically"
-    fi
-
-    decho "Build options: {"
-    for opt in $BUILD_OPTIONS; do
-        decho --no-prefix "  $opt"
+    # Debug
+    echo "[INFO] MXE-relevant CMake options in $build_dir:"
+    for opt in "${BUILD_OPTIONS[@]}"; do
+        echo "  $opt"
     done
-    decho --no-prefix "}"
 }
 
-parse_all_files
+query_mxe_cmake_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
+
+BUILD_OPTIONS_MULTILINE=""
+for opt in "${BUILD_OPTIONS[@]}"; do
+    BUILD_OPTIONS_MULTILINE+=$'\t\t-D'"$opt"$' \\\n'
+done
 
 # =============================================
 # Cleanup temporary extraction
 # =============================================
-# rm -rf "$TMP_DIR"
+if [[ "$DEBUG" != true ]]; then
+    rm -rf "$TMP_DIR"
+    iecho "Temporary directory removed: $TMP_DIR"
+else
+    decho "Keeping temporary directory: $TMP_DIR"
+fi
 
 # =============================================
 # Defaults
@@ -170,11 +157,6 @@ TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
 TEMPLATE="$MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_FILE="$OUTPUT_DIR/$PACKAGE_NAME.mk"
 IGNORE=""
-
-BUILD_OPTIONS_MULTILINE=""
-for opt in $BUILD_OPTIONS; do
-    BUILD_OPTIONS_MULTILINE+=$'\t\t-D'"$opt"$' \\\n'
-done
 
 if [[ "$GIT_URL" == *"github.com"* ]]; then
     DELETE_BLOCK='/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d'  # Remove non-GitHub block
