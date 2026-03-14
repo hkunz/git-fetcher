@@ -155,7 +155,7 @@ iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 # Optional: generate MXE .mk file
 # =============================================
 if [[ "$GENERATE_MXE" == true ]]; then
-    bash "$SCRIPT_DIR/generate_mxe.sh" \
+    bash "$ROOT_DIR/contrib/mxe/scripts/generate_mxe_mk.sh" \
         --owner_repo "$OWNER_REPO" \
         --archive "$ARCHIVE_FILE" \
         --pkg "$PACKAGE_NAME" \
