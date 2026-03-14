@@ -211,8 +211,24 @@ echo "[INFO] Generated MXE .mk file: $OUTPUT_FILE"
 TEST_TEMPLATE="$MXE_ROOT/templates/test.lang.template"
 TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME}-test.$TEST_LANG"
 
-export COMPILER=g++
+export TEST_LANG
+export PACKAGE_NAME
+export COMPILER=$([[ "$TEST_LANG" == "cpp" ]] && echo g++ || echo gcc)
 export TARGET=x86_64-w64-mingw32.static
 export DEPENDENCIES="-l$PACKAGE_NAME"
+
+if [[ "$TEST_LANG" == "cpp" ]]; then
+    export INCLUDES="#include <cstdio>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>"
+else
+    # For C, or other languages, you can define different includes
+    export INCLUDES="#include <stdio.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>"
+fi
+
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 echo "[INFO] Generated test file: $TEST_FILE"
