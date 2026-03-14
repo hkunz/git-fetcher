@@ -37,7 +37,7 @@ ${BUILD_OPTIONS_MULTILINE}
 	'$(MXE_MESON_WRAPPER)' $(MXE_MESON_OPTS) \
 		-Dprefix=/usr/local \
 		-Dlibdir=lib \
-		-Dbindir=bin
+		-Dbindir=bin \
 ${BUILD_OPTIONS_MULTILINE}
 		'$(BUILD_DIR)' '$(SOURCE_DIR)/$(PKG)'
 

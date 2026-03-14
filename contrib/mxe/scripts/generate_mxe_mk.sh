@@ -75,7 +75,8 @@ OTHER_FILES=$(echo "$JSON_OUTPUT" | jq -r '.other_files[]?')
 
 decho "Build Detection JSON Output: $JSON_OUTPUT"
 iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
-[[ -n "$OPTIONS_FILE" ]] && decho "Options File: $(bold_bright_cyan "$OPTIONS_FILE")"
+
+[[ -n "$OPTIONS_FILE" ]] && iecho "Options File: $(bold_bright_cyan "$OPTIONS_FILE")"
 
 mkdir -p "$TMP_DIR"
 
@@ -162,7 +163,7 @@ case "$BUILD_SYSTEM" in
         DELETE_BUILD='/# BEGIN_MESON/,/# END_MESON/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
         ;;
     Meson)
-        BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release"
+        BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release \\"
         DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
         ;;
     *)
@@ -201,7 +202,6 @@ sed -i "/\${BUILD_OPTIONS_MULTILINE}/{
     d
 }" "$OUTPUT_FILE"
 rm "$TMP"
-echo "TEMP == $TMP"
 
 echo "[INFO] Generated MXE .mk file: $OUTPUT_FILE"
 
