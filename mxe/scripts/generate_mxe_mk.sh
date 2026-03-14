@@ -48,30 +48,38 @@ TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
 TEMPLATE="$MXE_ROOT/templates/cmake.template.mk"
 OUTPUT_FILE="$OUTPUT_DIR/$PACKAGE.mk"
 IGNORE=""
-# Prepare CMAKE_FLAGS
-CMAKE_FLAGS=""
+
+BUILD_OPTIONS_MULTILINE=""
 for opt in $BUILD_OPTIONS; do
-    CMAKE_FLAGS+=$'\t\t-D'"$opt"$' \\\n'
+    BUILD_OPTIONS_MULTILINE+=$'\t\t-D'"$opt"$' \\\n'
 done
-CMAKE_FLAGS+="\t\t-DCMAKE_BUILD_TYPE=Release"
 
 TMP=$(mktemp)
 
 if [[ "$WEBSITE" == *"github.com"* ]]; then
-    DELETE_GITHUB='/${GITHUB_CONF}/d'
-    DELETE_NON_GITHUB='/${NON_GITHUB}/,+3d'
+    DELETE_BLOCK='/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d'  # Remove non-GitHub block
 else
-    DELETE_GITHUB='/${GITHUB_CONF}/,+1d'
-    DELETE_NON_GITHUB='/${NON_GITHUB}/d'
+    DELETE_BLOCK='/# BEGIN_GITHUB/,/# END_GITHUB/d'  # Remove GitHub block
 fi
 
-echo -e "$CMAKE_FLAGS" > "$TMP"
-sed -e "/\${CMAKE_FLAGS}/{
-    r $TMP
-    d
-}" \
--e "$DELETE_GITHUB" \
--e "$DELETE_NON_GITHUB" \
+# Remove build system blocks
+case "$BUILD_SYSTEM" in
+    CMake)
+        BUILD_OPTIONS_MULTILINE+="\t\t-DCMAKE_BUILD_TYPE=Release"
+        DELETE_BUILD='/# BEGIN_MESON/,/# END_MESON/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
+        ;;
+    Meson)
+        BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release"
+        DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
+        ;;
+    *)
+        DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_MESON/,/# END_MESON/d'
+        ;;
+esac
+
+sed \
+${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
+${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
 -e "s|\${PACKAGE}|$PACKAGE|g" \
 -e "s|\${WEBSITE}|$WEBSITE|g" \
@@ -80,11 +88,26 @@ sed -e "/\${CMAKE_FLAGS}/{
 -e "s|\${ARCHIVE}|$ARCHIVE|g" \
 -e "s|\${IGNORE}|$IGNORE|g" \
 -e "s|\${CHECKSUM}|$CHECKSUM|g" \
+-e "/# BEGIN_GITHUB/d" \
+-e "/# END_GITHUB/d" \
+-e "/# BEGIN_NON_GITHUB/d" \
+-e "/# END_NON_GITHUB/d" \
+-e "/# BEGIN_CMAKE/d" \
+-e "/# END_CMAKE/d" \
+-e "/# BEGIN_MESON/d" \
+-e "/# END_MESON/d" \
+-e "/# BEGIN_OTHER_BUILD_SYSTEM/d" \
+-e "/# END_OTHER_BUILD_SYSTEM/d" \
 "$TEMPLATE" > "$OUTPUT_FILE"
 
+# inserting a multiline block of build optiond via temporary file to work around sed's inability to handle multiline replacements
+echo -e "$BUILD_OPTIONS_MULTILINE" > "$TMP"
+sed -i "/\${BUILD_OPTIONS_MULTILINE}/{
+    r $TMP
+    d
+}" "$OUTPUT_FILE"
+
 rm "$TMP"
-
-
 
 echo "[INFO] Generated MXE .mk file: $OUTPUT_FILE"
 

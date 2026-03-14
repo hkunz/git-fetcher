@@ -8,26 +8,47 @@ $(PKG)_DESCR	:= ${DESCRIPTION}
 $(PKG)_VERSION	:= ${VERSION}
 $(PKG)_IGNORE	:= ${IGNORE}
 $(PKG)_CHECKSUM	:= ${CHECKSUM}
-${GITHUB_CONF}
+# BEGIN_GITHUB
 $(PKG)_GH_CONF 	:= ${OWNER_REPO}/tags,v
-${NON_GITHUB}
+# END_GITHUB
+# BEGIN_NON_GITHUB
 $(PKG)_URL		:= https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
 $(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)  # folder name after extracting archive
 $(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz  # downloaded archive file name
+# END_NON_GITHUB
 $(PKG)_DEPS		:= ${DEPENDENCIES}
 
 define $(PKG)_BUILD
 
+# BEGIN_CMAKE
 	# configure package with cmake
 	cd "$(BUILD_DIR)" && '$(TARGET)-cmake' "$(SOURCE_DIR)" \
 		-DCMAKE_INSTALL_PREFIX='$(PREFIX)/$(TARGET)' \
 		-DCMAKE_PREFIX_PATH='$(PREFIX)/$(TARGET)' \
 		-DBUILD_SHARED_LIBS=$(CMAKE_SHARED_BOOL) \
-${CMAKE_FLAGS}
+${BUILD_OPTIONS_MULTILINE}
 
 	# build cmake package and install
 	$(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
 	$(MAKE) -C '$(BUILD_DIR)' -j 1 install
+# END_CMAKE
+# BEGIN_MESON
+	# configure package with meson
+	'$(MXE_MESON_WRAPPER)' $(MXE_MESON_OPTS) \
+		-Dprefix=/usr/local \
+		-Dlibdir=lib \
+		-Dbindir=bin
+${BUILD_OPTIONS_MULTILINE}
+		'$(BUILD_DIR)' '$(SOURCE_DIR)/$(PKG)'
+
+	# build meson package and install
+	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j '$(JOBS)'
+	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j 1 install
+# END_MESON
+# BEGIN_OTHER_BUILD_SYSTEM
+    # Configure package
+	# Build package and install
+# END_OTHER_BUILD_SYSTEM
 
 	# Only needed if the project does not ship a .pc file
 	# $(call GENERATE_PC, \
