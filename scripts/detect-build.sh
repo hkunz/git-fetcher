@@ -41,46 +41,67 @@ FOUND_PATHS=()
 OPTIONS_FILE=""
 PC_FILE=""
 MAIN_CANDIDATE=""
+MIN_DEPTH=999   # Track shallowest depth
 
 while IFS= read -r file; do
     case "$file" in
        */meson.build|meson.build)
             BUILD_SYSTEM="Meson"
             FOUND_PATHS+=("$file")
-            [[ -z "$MAIN_CANDIDATE" || "$(awk -F/ '{print NF}' <<< "$file")" -lt "$(awk -F/ '{print NF}' <<< "$MAIN_CANDIDATE")" ]] && MAIN_CANDIDATE="$file" ;;
+            depth=$(awk -F/ '{print NF}' <<< "$file")
+            [[ -z "$MAIN_CANDIDATE" || $depth -lt $MIN_DEPTH ]] && MAIN_CANDIDATE="$file" MIN_DEPTH="$depth"
+            ;;
         */meson_options.txt|meson_options.txt)
             OPTIONS_FILE="$file"
-            FOUND_PATHS+=("$file") ;;
+            FOUND_PATHS+=("$file")
+            ;;
         */CMakeLists.txt|CMakeLists.txt)
             BUILD_SYSTEM="CMake"
             FOUND_PATHS+=("$file")
-            [[ -z "$MAIN_CANDIDATE" ]] && MAIN_CANDIDATE="$file" ;;
+            depth=$(awk -F/ '{print NF}' <<< "$file")
+            [[ -z "$MAIN_CANDIDATE" || $depth -lt $MIN_DEPTH ]] && MAIN_CANDIDATE="$file" MIN_DEPTH="$depth"
+            ;;
         *.cmake)
-            FOUND_PATHS+=("$file") ;;
+            FOUND_PATHS+=("$file")
+            ;;
         */configure|configure)
-            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Autotools" ;;
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Autotools"
+            ;;
         */Makefile|Makefile)
-            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Makefile" ;;
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Makefile"
+            ;;
         */pyproject.toml|pyproject.toml)
-            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Python" ;;
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Python"
+            ;;
         */Cargo.toml|Cargo.toml)
-            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Rust" ;;
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Rust"
+            ;;
         */go.mod|go.mod)
-            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Go" ;;
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Go"
+            ;;
         *.pc|*.pc.in)
-            [[ -z "$PC_FILE" ]] && PC_FILE="$file" ;;
+            [[ -z "$PC_FILE" ]] && PC_FILE="$file"
+            ;;
     esac
 done < <("${CMD[@]}")
 
 # ------------------------------
-# Determine main file (shallowest path)
+# MAIN_FILE is shallowest path
 # ------------------------------
 MAIN_FILE="$MAIN_CANDIDATE"
-OTHER_FILES=()
 
+# ------------------------------
+# Sort other files by depth (excluding MAIN_FILE)
+# ------------------------------
+OTHER_FILES=()
 if [[ ${#FOUND_PATHS[@]} -gt 0 ]]; then
-    # Sort by path depth, excluding MAIN_FILE
-    mapfile -t sorted < <(printf "%s\n" "${FOUND_PATHS[@]}" | grep -vF "$MAIN_FILE" | awk -F/ '{print NF, $0}' | sort -n | cut -d' ' -f2-)
+    mapfile -t sorted < <(
+        printf "%s\n" "${FOUND_PATHS[@]}" |
+        grep -vF "$MAIN_FILE" |
+        awk -F/ '{print NF, $0}' |
+        sort -n |
+        cut -d' ' -f2-
+    )
     OTHER_FILES=("${sorted[@]}")
 fi
 
