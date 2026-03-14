@@ -100,38 +100,55 @@ for f in "${FOUND_FILES[@]}"; do
 done
 
 # =============================================
-# Parse build options
+# Parse build options from a single file
 # =============================================
-BUILD_OPTIONS=""
-if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
-    for FILE in "${FOUND_FILES[@]}"; do
-        FULL_PATH="$TMP_DIR/$FILE"
-        while read -r line; do
-            name=$(echo "$line" | awk '{print $1}')
-            default=$(echo "$line" | awk '{print $NF}')
-            BUILD_OPTIONS+=" ${name}=${default}"  # preserve original CMake parsing
-        done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$FULL_PATH")
-        while read -r line; do
-            name=$(echo "$line" | awk '{print $1}')
-            default=$(echo "$line" | awk '{print $2}')
-            BUILD_OPTIONS+=" ${name}=${default}"
-        done < <(grep -Po '^\s*set_aom_(config|option|detect)_var\(\s*\K[A-Z0-9_]+\s+[0-9ONF]+' "$FULL_PATH")
-        # done < <(grep -Po '^\s*set\w*_var\s*\(\s*\K([A-Za-z0-9_]+)\s+"[^"]*"\s+([A-Za-z0-9_]+)' "$FULL_PATH")
-    done
-elif [[ "$BUILD_SYSTEM" == "Meson" && -n "$OPTIONS_FILE" ]]; then
-    FULL_PATH="$TMP_DIR/$OPTIONS_FILE"
-    COLLAPSED=$(awk 'BEGIN { ORS=""; inblock=0 } {gsub(/[[:space:]]+/, " ") } /^option\(/ {inblock=1; printf "%s", $0; next} inblock {printf " %s", $0} /\)/ && inblock {print ""; inblock=0}' "$FULL_PATH")
-    decho "Raw Options: ${COLLAPSED:0:100}"
-    BUILD_OPTIONS=$(echo "$COLLAPSED" | sed 's/option(/\noption(/g' | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" | tr '\n' ' ')
-else
-    wecho "Build system '$BUILD_SYSTEM' not handled automatically"
-fi
+parse_build_options() {
+    local full_path="$1"
 
-decho "Build options: {"
-for opt in $BUILD_OPTIONS; do
-    decho --no-prefix "  $opt"
-done
-decho --no-prefix "}"
+    # OPTION(...) statements
+    while read -r line; do
+        name=$(echo "$line" | awk '{print $1}')
+        default=$(echo "$line" | awk '{print $NF}')
+        BUILD_OPTIONS+=" ${name}=${default}"  # preserve original CMake parsing
+    done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$full_path")
+
+    # set_aom_*_var(...) statements
+    while read -r line; do
+        name=$(echo "$line" | awk '{print $1}')
+        default=$(echo "$line" | awk '{print $2}')
+        BUILD_OPTIONS+=" ${name}=${default}"
+    done < <(grep -Po '^\s*set_aom_(config|option|detect)_var\(\s*\K[A-Z0-9_]+\s+[0-9ONF]+' "$full_path")
+}
+
+# =============================================
+# Parse important files for build options
+# =============================================
+parse_all_files() {
+    BUILD_OPTIONS=""
+
+    if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
+        for FILE in "${FOUND_FILES[@]}"; do
+            FULL_PATH="$TMP_DIR/$FILE"
+            parse_build_options "$FULL_PATH"
+        done
+
+    elif [[ "$BUILD_SYSTEM" == "Meson" && -n "$OPTIONS_FILE" ]]; then
+        FULL_PATH="$TMP_DIR/$OPTIONS_FILE"
+        COLLAPSED=$(awk 'BEGIN { ORS=""; inblock=0 } {gsub(/[[:space:]]+/, " ") } /^option\(/ {inblock=1; printf "%s", $0; next} inblock {printf " %s", $0} /\)/ && inblock {print ""; inblock=0}' "$FULL_PATH")
+        decho "Raw Options: ${COLLAPSED:0:100}"
+        BUILD_OPTIONS=$(echo "$COLLAPSED" | sed 's/option(/\noption(/g' | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" | tr '\n' ' ')
+    else
+        wecho "Build system '$BUILD_SYSTEM' not handled automatically"
+    fi
+
+    decho "Build options: {"
+    for opt in $BUILD_OPTIONS; do
+        decho --no-prefix "  $opt"
+    done
+    decho --no-prefix "}"
+}
+
+parse_all_files
 
 # =============================================
 # Cleanup temporary extraction
