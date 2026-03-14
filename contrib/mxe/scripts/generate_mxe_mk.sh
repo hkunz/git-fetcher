@@ -82,38 +82,83 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 mkdir -p "$TMP_DIR"
 
 # =============================================
-# Extract main + other files
+# Extract main + other files (robust to flat or nested tarballs)
 # =============================================
 FOUND_FILES=("$MAIN_FILE")
-[[ -n "$OPTIONS_FILE" ]] && FOUND_FILES+=("$OPTIONS_FILE") 
-[[ -n "$PC_FILE" ]] && FOUND_FILES+=("$PC_FILE")   # <-- add this
+[[ -n "$OPTIONS_FILE" ]] && FOUND_FILES+=("$OPTIONS_FILE")
+[[ -n "$PC_FILE" ]] && FOUND_FILES+=("$PC_FILE")
 while IFS= read -r f; do
     FOUND_FILES+=("$f")
 done <<< "$OTHER_FILES"
 
-for f in "${FOUND_FILES[@]}"; do
-    if tar -tf "$ARCHIVE_FILE" | grep -q "^$f\$"; then
-        tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --overwrite "$f"
-    else
-        vecho "Warning: $f not found in archive"
-    fi
-done
+# Determine if archive has a single top-level folder
+TOP_LEVEL_NAME=$(tar -tf "$ARCHIVE_FILE" | awk -F/ '{print $1}' | sort -u)
+if [[ $(echo "$TOP_LEVEL_NAME" | wc -l) -eq 1 && ! -d "$TMP_DIR/$TOP_LEVEL_NAME" ]]; then
+    # Archive already has a single top-level folder, extract normally
+    for f in "${FOUND_FILES[@]}"; do
+        if tar -tf "$ARCHIVE_FILE" | grep -q "^$f\$"; then
+            tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --overwrite "$f"
+        else
+            vecho "Warning: $f not found in archive"
+        fi
+    done
+    TOP_LEVEL_DIR="$TMP_DIR/$TOP_LEVEL_NAME"
+else
+    # Archive is flat or has multiple top-level items -> create folder
+    TOP_LEVEL_DIR="$TMP_DIR/${PACKAGE_NAME}-${VERSION}"
+    mkdir -p "$TOP_LEVEL_DIR"
+    for f in "${FOUND_FILES[@]}"; do
+        if tar -tf "$ARCHIVE_FILE" | grep -q "^$f\$"; then
+            tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --transform "s|^|${PACKAGE_NAME}-${VERSION}/|" --overwrite "$f"
+        else
+            vecho "Warning: $f not found in archive"
+        fi
+    done
+
+    # Fix paths so later code works
+    for i in "${!FOUND_FILES[@]}"; do
+        FOUND_FILES[$i]="${PACKAGE_NAME}-${VERSION}/${FOUND_FILES[$i]}"
+    done
+fi
 
 # =============================================
 # Parse build options
 # =============================================
 BUILD_OPTIONS=""
+
 if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
     for FILE in "${FOUND_FILES[@]}"; do
         FULL_PATH="$TMP_DIR/$FILE"
+        [[ ! -f "$FULL_PATH" ]] && FULL_PATH="$TMP_DIR/$PACKAGE_NAME/$FILE"
+        [[ ! -f "$FULL_PATH" ]] && continue
+
+        # ---------------------------------
+        # Standard CMake option() parser
+        # ---------------------------------
         while read -r line; do
             name=$(echo "$line" | awk '{print $1}')
             default=$(echo "$line" | awk '{print $NF}')
-            BUILD_OPTIONS+=" ${name}=${default}"  # preserve original CMake parsing
-        done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$FULL_PATH")
+            BUILD_OPTIONS+=" ${name}=${default}"
+        done < <(
+            grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$FULL_PATH"
+        )
+
+        # ---------------------------------
+        # Fallback: set(... CACHE BOOL ...)
+        # Only run if option() not used
+        # ---------------------------------
+        # parse only if using option()
+        while read -r line; do
+            name=$(echo "$line" | awk '{print $1}')
+            default=$(echo "$line" | awk '{print $2}')
+            BUILD_OPTIONS+=" ${name}=${default}"
+        done < <(grep -Po '^\s*set_aom_(config|option|detect)_var\(\s*\K[A-Z0-9_]+\s+[0-9ONF]+' "$FULL_PATH")
+        # done < <(grep -Po '^\s*set\w*_var\s*\(\s*\K([A-Za-z0-9_]+)\s+"[^"]*"\s+([A-Za-z0-9_]+)' "$FULL_PATH")
+
     done
 elif [[ "$BUILD_SYSTEM" == "Meson" && -n "$OPTIONS_FILE" ]]; then
     FULL_PATH="$TMP_DIR/$OPTIONS_FILE"
+    [[ ! -f "$FULL_PATH" ]] && FULL_PATH="$TMP_DIR/$PACKAGE_NAME/$OPTIONS_FILE"
     COLLAPSED=$(awk 'BEGIN { ORS=""; inblock=0 } {gsub(/[[:space:]]+/, " ") } /^option\(/ {inblock=1; printf "%s", $0; next} inblock {printf " %s", $0} /\)/ && inblock {print ""; inblock=0}' "$FULL_PATH")
     decho "Raw Options: ${COLLAPSED:0:100}"
     BUILD_OPTIONS=$(echo "$COLLAPSED" | sed 's/option(/\noption(/g' | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" | tr '\n' ' ')
@@ -174,9 +219,15 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
-if [[ -n "$PC_FILE" && -s "$TMP_DIR/$PC_FILE" ]]; then
+PC_PATH="$TMP_DIR/$PC_FILE"
+if [[ ! -f "$PC_PATH" ]]; then
+    # fallback if flat archive moved it under PACKAGE_NAME
+    PC_PATH="$TMP_DIR/$PACKAGE_NAME/$PC_FILE"
+fi
+
+if [[ -n "$PC_FILE" && -s "$PC_PATH" ]]; then
     vecho "PC file exists and is not empty: $PC_FILE"
-    DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
+    DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
 fi
 
