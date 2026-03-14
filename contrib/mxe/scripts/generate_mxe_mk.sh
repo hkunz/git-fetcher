@@ -95,7 +95,7 @@ for f in "${FOUND_FILES[@]}"; do
     if tar -tf "$ARCHIVE_FILE" | grep -q "^$f\$"; then
         tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" --overwrite "$f"
     else
-        vecho "Warning: $f not found in archive"
+        wecho "$f not found in archive"
     fi
 done
 
@@ -111,6 +111,12 @@ if [[ "$BUILD_SYSTEM" == "CMake" ]]; then
             default=$(echo "$line" | awk '{print $NF}')
             BUILD_OPTIONS+=" ${name}=${default}"  # preserve original CMake parsing
         done < <(grep -Po '^\s*(OPTION|option)\s*\(\s*\K[A-Za-z0-9_]+\s+"[^"]*"\s+[A-Za-z0-9_]+' "$FULL_PATH")
+        while read -r line; do
+            name=$(echo "$line" | awk '{print $1}')
+            default=$(echo "$line" | awk '{print $2}')
+            BUILD_OPTIONS+=" ${name}=${default}"
+        done < <(grep -Po '^\s*set_aom_(config|option|detect)_var\(\s*\K[A-Z0-9_]+\s+[0-9ONF]+' "$FULL_PATH")
+        # done < <(grep -Po '^\s*set\w*_var\s*\(\s*\K([A-Za-z0-9_]+)\s+"[^"]*"\s+([A-Za-z0-9_]+)' "$FULL_PATH")
     done
 elif [[ "$BUILD_SYSTEM" == "Meson" && -n "$OPTIONS_FILE" ]]; then
     FULL_PATH="$TMP_DIR/$OPTIONS_FILE"
@@ -118,7 +124,7 @@ elif [[ "$BUILD_SYSTEM" == "Meson" && -n "$OPTIONS_FILE" ]]; then
     decho "Raw Options: ${COLLAPSED:0:100}"
     BUILD_OPTIONS=$(echo "$COLLAPSED" | sed 's/option(/\noption(/g' | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" | tr '\n' ' ')
 else
-    vecho "Warning: Build system '$BUILD_SYSTEM' not handled automatically"
+    wecho "Build system '$BUILD_SYSTEM' not handled automatically"
 fi
 
 decho "Build options: {"
@@ -218,7 +224,7 @@ sed -i "/\${BUILD_OPTIONS_MULTILINE}/{
 }" "$OUTPUT_FILE"
 rm "$TMP"
 
-echo "[INFO] Generated MXE .mk file: $OUTPUT_FILE"
+iecho "Generated MXE .mk file: $OUTPUT_FILE"
 
 # =============================================
 # Generate test file
@@ -245,4 +251,4 @@ else
 fi
 
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
-echo "[INFO] Generated test file: $TEST_FILE"
+iecho "Generated test file: $TEST_FILE"

@@ -30,7 +30,63 @@ download_archive() {
     mkdir -p "$(dirname "$file")"
     iecho "Downloading from URL: $url"
     iecho "Saving to local file: $file"
+
     curl -L "$url" -o "$file"
+
+   # detect archive type
+    local filetype
+    filetype=$(file -b "$file")
+
+    local tflag detected
+    case "$filetype" in
+        *gzip*)  tflag="z"; detected="gzip" ;;
+        *bzip2*) tflag="j"; detected="bzip2" ;;
+        *XZ*)    tflag="J"; detected="xz" ;;
+        *tar*)   tflag="";  detected="tar" ;;
+        *)
+            vecho "Not a tar archive ($filetype), skipping flat check"
+            return
+            ;;
+    esac
+
+    # check if filename extension matches detected type
+    local ext="${file##*.}"
+    if [[ "$ext" == "gz" && "$detected" != "gzip" ]]; then
+        wecho "Notice: file extension suggests gzip but actual archive format is: $filetype"
+    else
+        iecho "File extension '$ext' matches ($filetype)"
+    fi
+
+    # check if flat tarball
+    local first_dirs
+    first_dirs=$(tar -t${tflag}f "$file" | cut -d/ -f1 | sort -u)
+
+    if [ "$(echo "$first_dirs" | wc -l)" -ne 1 ]; then
+        iecho "Flat tarball detected, wrapping contents"
+
+        local tmpdir
+        tmpdir=$(mktemp -d)
+
+        tar -x${tflag}f "$file" -C "$tmpdir"
+
+        local name
+        name=$(basename "$file")
+        # Remove compression extensions so folder matches tar name without extension
+        name="${name%.tar.gz}"
+        name="${name%.tar.bz2}"
+        name="${name%.tar.xz}"
+        name="${name%.tgz}"
+        name="${name%.tbz2}"
+        name="${name%.txz}"
+
+        mkdir "$tmpdir/$name"
+        shopt -s dotglob
+        mv "$tmpdir"/* "$tmpdir/$name" 2>/dev/null || true
+
+        tar -c${tflag}f "$file" -C "$tmpdir" "$name"
+        rm -rf "$tmpdir"
+    fi
+
     vecho "Download finished successfully: $file"
 }
 
@@ -53,18 +109,10 @@ url_encode() {
 }
 
 # =============================================
-# Print info messages
-# Arguments: $* - message
-# =============================================
-iecho() {
-    echo "[INFO] $*"
-}
-
-# =============================================
 # General message printer with optional prefix and conditional printing
 # Arguments:
-#   $1 - variable name to check (VERBOSE, DEBUG, or special "ALWAYS")
-#   $2 - prefix (e.g., "[VERBOSE]", "[DEBUG]", "[ERROR]")
+#   $1 - variable name to check (VERBOSE, DEBUG, INFO, WARNING, or ALWAYS)
+#   $2 - prefix (e.g., "[VERBOSE]", "[DEBUG]", "[INFO]", "[WARNING]", "[ERROR]")
 #   $3..$n - message
 #   optional flag: --no-prefix
 # =============================================
@@ -79,17 +127,25 @@ _msg() {
         shift
     fi
 
-    if [[ "$var_name" == "ALWAYS" ]] || [[ "${!var_name}" == true ]]; then
-        [[ "$no_prefix" == true ]] && echo "$*" >&2 || echo "$prefix $*" >&2
+    # Decide output stream
+    local out=2  # default stderr
+    [[ "$var_name" == "INFO" ]] && out=1   # INFO goes to stdout
+
+    # Check if message should print
+    if [[ "$var_name" == "ALWAYS" ]] || [[ "${!var_name}" == true ]] || [[ "$var_name" == "INFO" ]]; then
+        if [[ "$no_prefix" == true ]]; then
+            echo "$*" >&$out
+        else
+            echo "$prefix $*" >&$out
+        fi
     fi
 }
 
 # =============================================
-# Verbose message
-vecho() { _msg VERBOSE "[VERBOSE]" "$@"; }
-
-# Debug message
-decho() { _msg DEBUG "[DEBUG]" "$@"; }
-
-# Error message (always prints, to stderr)
-eecho() { _msg ALWAYS "[ERROR]" "$@"; }
+# Convenience wrappers
+# =============================================
+iecho() { _msg INFO "[INFO]" "$@"; }        # prints to stdout
+vecho() { _msg VERBOSE "[VERBOSE]" "$@"; }  # prints to stderr if VERBOSE=true
+decho() { _msg DEBUG "[DEBUG]" "$@"; }      # prints to stderr if DEBUG=true
+wecho() { _msg ALWAYS "[WARNING]" "$@"; }   # always stderr
+eecho() { _msg ALWAYS "[ERROR]" "$@"; }     # always stderr
