@@ -28,7 +28,16 @@ The following tools must be installed for `git-source` to work properly:
 - `curl` or **wget** – Used by `download_archive` to fetch files from URLs.
 - `sha256sum` – Used to compute checksums. On macOS, this may be `shasum -a 256`.
 - `make` – Needed if building packages locally or running MXE build commands.
-- `MXE toolchain` (optional) – Only required if you plan to generate `.mk` files and build packages.
+- `tar` – Needed to extract source archives.
+
+## Optional Tools
+
+- `MXE toolchain` Only required if you plan to generate `.mk` files and build packages.
+- `meson` – Required to detect and configure Meson-based projects.
+- `ninja-build` – Needed by Meson as a backend to configure and build projects.
+- `cmake` – Required to detect and configure CMake-based projects.
+- `patch` – Optional, used if the build scripts apply patches to sources.
+- `pkg-config` – Useful for detecting installed libraries when generating `.mk` files.
 
 ## Installation
 
