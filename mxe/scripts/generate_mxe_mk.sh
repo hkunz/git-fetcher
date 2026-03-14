@@ -85,7 +85,7 @@ ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 -e "s|\${WEBSITE}|$WEBSITE|g" \
 -e "s|\${VERSION}|$VERSION|g" \
 -e "s|\${DESCRIPTION}|$DESCRIPTION|g" \
--e "s|\${ARCHIVE}|$ARCHIVE|g" \
+-e "s|\${ARCHIVE_URL}|$ARCHIVE_URL|g" \
 -e "s|\${IGNORE}|$IGNORE|g" \
 -e "s|\${CHECKSUM}|$CHECKSUM|g" \
 -e "/# BEGIN_GITHUB/d" \

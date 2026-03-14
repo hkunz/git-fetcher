@@ -12,9 +12,9 @@ $(PKG)_CHECKSUM	:= ${CHECKSUM}
 $(PKG)_GH_CONF 	:= ${OWNER_REPO}/tags,v
 # END_GITHUB
 # BEGIN_NON_GITHUB
-$(PKG)_URL		:= https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
-$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)  # folder name after extracting archive
-$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz  # downloaded archive file name
+$(PKG)_URL		:= ${ARCHIVE_URL}
+$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)
+$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz
 # END_NON_GITHUB
 $(PKG)_DEPS		:= ${DEPENDENCIES}
 
