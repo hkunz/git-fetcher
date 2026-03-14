@@ -149,8 +149,6 @@ for opt in $BUILD_OPTIONS; do
     BUILD_OPTIONS_MULTILINE+=$'\t\t-D'"$opt"$' \\\n'
 done
 
-TMP=$(mktemp)
-
 if [[ "$GIT_URL" == *"github.com"* ]]; then
     DELETE_BLOCK='/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d'  # Remove non-GitHub block
 else
@@ -195,14 +193,15 @@ ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 -e "/# END_OTHER_BUILD_SYSTEM/d" \
 "$TEMPLATE" > "$OUTPUT_FILE"
 
-# inserting a multiline block of build optiond via temporary file to work around sed's inability to handle multiline replacements
+# inserting a multiline block of build options via temporary file to work around sed's inability to handle multiline replacements
+TMP=$(mktemp)
 echo -e "$BUILD_OPTIONS_MULTILINE" > "$TMP"
 sed -i "/\${BUILD_OPTIONS_MULTILINE}/{
     r $TMP
     d
 }" "$OUTPUT_FILE"
-
 rm "$TMP"
+echo "TEMP == $TMP"
 
 echo "[INFO] Generated MXE .mk file: $OUTPUT_FILE"
 
