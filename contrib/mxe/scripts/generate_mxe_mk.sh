@@ -85,8 +85,7 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 mkdir -p "$TMP_DIR"
 tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR"
 
-# Detect top-level folder (source root)
-TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)
+TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)  # Detect top-level folder (source root)
 SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
 
 # =============================================
@@ -98,74 +97,77 @@ query_mxe_cmake_options() {
 
     mkdir -p "$build_dir"
     cd "$build_dir" || return 1
-
-    # Configure to populate cache
-    cmake "$src_dir" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null || true
-
+    if [[ "$DEBUG" == true ]]; then  # Configure to populate cache
+        cmake "$src_dir" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || true
+    else
+        cmake "$src_dir" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null 2>&1 || true
+    fi
     # Only user-configurable options: BOOL and project-specific STRING/PATH
-    mapfile -t BUILD_OPTIONS < <(
-        cmake -LAH "$build_dir" \
-        | grep -E '^[A-Z0-9_]+:BOOL=' \
-        | sed 's/:.*=/=/'
-    )
-
-    # Deduplicate
-    BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | sort -u))
-
-    # Debug
-    echo "[INFO] MXE-relevant CMake options in $build_dir:"
+    if [[ "$DEBUG" == true ]]; then
+        mapfile -t BUILD_OPTIONS < <(
+            cmake -LAH "$build_dir" \
+            | grep -E '^[A-Z0-9_]+:BOOL=' \
+            | sed 's/:.*=/=/'
+        )
+    else
+        mapfile -t BUILD_OPTIONS < <(
+            cmake -LAH "$build_dir" 2>/dev/null \
+            | grep -E '^[A-Z0-9_]+:BOOL=' \
+            | sed 's/:.*=/=/'
+        )
+    fi
+    BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | sort -u))  # Deduplicate
+    iecho "MXE-relevant CMake options in $build_dir"
     for opt in "${BUILD_OPTIONS[@]}"; do
-        echo "  $opt"
+        decho --no-prefix "  $opt"
     done
+    decho --no-prefix "}"
 }
 
+# =============================================
+# Query Meson for all real options
+# =============================================
 query_mxe_meson_options() {
     local src_dir="$1"
-    local build_dir="$2"
+    local build_dir="$2"  # unused but kept for consistency
+    BUILD_OPTIONS=()
 
-    if ! command -v meson >/dev/null 2>&1; then
-        echo "[WARN] Meson not found, skipping Meson options"
-        BUILD_OPTIONS=()
-        return
+    if [[ -n "$OPTIONS_FILE" ]]; then
+        local full_path="$TMP_DIR/$OPTIONS_FILE"
+        if [[ -f "$full_path" ]]; then
+            # Collapse multiline 'option(...)' blocks into a single line
+            local collapsed
+            collapsed=$(awk 'BEGIN { ORS=""; inblock=0 }
+                { gsub(/[[:space:]]+/, " ") }
+                /^option\(/ { inblock=1; printf "%s", $0; next }
+                inblock { printf " %s", $0 }
+                /\)/ && inblock { print ""; inblock=0 }' "$full_path")
+            decho "Raw Options: ${collapsed:0:100}"
+            # Extract boolean options and set them as name=value
+            BUILD_OPTIONS=$(echo "$collapsed" \
+                | sed 's/option(/\noption(/g' \
+                | sed -En "s/option\('([^']+)',[^)]*value:[[:space:]]*(true|false)[^)]*\)/\1=\2/p" \
+                | tr '\n' ' ')
+            BUILD_OPTIONS=($BUILD_OPTIONS)  # convert string to array
+            iecho "Detected Meson build options from $OPTIONS_FILE"
+            decho "Build options: {"
+            for opt in "${BUILD_OPTIONS[@]}"; do
+                decho --no-prefix "  $opt"
+            done
+            decho --no-prefix "}"
+        else
+            wecho "OPTIONS_FILE not found: $full_path"
+        fi
+    else
+        wecho "No OPTIONS_FILE detected for Meson"
     fi
-
-    if ! command -v ninja >/dev/null 2>&1; then
-        echo "[WARN] Ninja not found, Meson setup cannot run"
-        BUILD_OPTIONS=()
-        return
-    fi
-
-    rm -rf "$build_dir"
-    mkdir -p "$build_dir"
-    cd "$build_dir" || return 1
-
-    # Run setup with Ninja backend
-    meson setup . "$src_dir" --wipe --reconfigure --backend ninja > /dev/null || {
-        echo "[WARN] Meson setup failed, skipping option detection"
-        BUILD_OPTIONS=()
-        return
-    }
-
-    # Then configure
-    mapfile -t MESON_OPTIONS < <(
-        meson configure . \
-        | grep -E '^[A-Za-z0-9_]+:' \
-        | sed 's/:.*=/=/'
-    )
-
-    MESON_OPTIONS=($(printf '%s\n' "${MESON_OPTIONS[@]}" | sort -u))
-
-    echo "[INFO] Meson build options detected in $build_dir:"
-    for opt in "${MESON_OPTIONS[@]}"; do
-        echo "  $opt"
-    done
-
-    BUILD_OPTIONS=("${MESON_OPTIONS[@]}")
 }
 
+# =============================================
+# Query for build options (e.g. CMake vars)
+# =============================================
 case "$BUILD_SYSTEM" in
     CMake)
-        # Out-of-source build folder for CMake
         TMP_BUILD_DIR="$SOURCE_ROOT/build"
         decho "CMake build folder: $TMP_BUILD_DIR"
         query_mxe_cmake_options "$SOURCE_ROOT" "$TMP_BUILD_DIR" ;;
@@ -194,20 +196,16 @@ else
 fi
 
 # =============================================
-# Defaults
+# Generate .mk file
 # =============================================
 MXE_ROOT="$ROOT_DIR/contrib/mxe"
 OUTPUT_DIR="$MXE_ROOT/generated"
-mkdir -p "$OUTPUT_DIR"
-
 TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
-
-# =============================================
-# Generate .mk file
-# =============================================
 TEMPLATE="$MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_FILE="$OUTPUT_DIR/$PACKAGE_NAME.mk"
 IGNORE=""
+
+mkdir -p "$OUTPUT_DIR"
 
 if [[ "$GIT_URL" == *"github.com"* ]]; then
     DELETE_BLOCK='/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d'  # Remove non-GitHub block
