@@ -164,5 +164,5 @@ if [[ "$GENERATE_MXE" == true ]]; then
         --checksum "$CHECKSUM" \
         --description "$DESCRIPTION" \
         --website "$GIT_URL" \
-        --debug
+        $( [[ "$DEBUG" == true ]] && echo --debug )
 fi

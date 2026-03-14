@@ -10,6 +10,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." &>/dev/null && pwd)"
 SCRIPT_DIR="$ROOT_DIR/scripts"
 TMP_DIR="$ROOT_DIR/tmp"
 
+source "$SCRIPT_DIR/lib.sh"
+source "$SCRIPT_DIR/lib-color.sh"
+
 # =============================================
 # Defaults / Options
 # =============================================
@@ -32,21 +35,21 @@ print_usage() {
 # =============================================
 # Parse arguments
 # =============================================
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --owner_repo) OWNER_REPO="$2"; shift ;;
-        --archive) ARCHIVE_FILE="$2"; shift ;;
-        --pkg) PACKAGE_NAME="$2"; shift ;;
-        --version) VERSION="$2"; shift ;;
-        --archive_url) ARCHIVE_URL="$2"; shift ;;
-        --checksum) CHECKSUM="$2"; shift ;;
-        --description) DESCRIPTION="$2"; shift ;;
-        --website) GIT_URL="$2"; shift ;;
-        --debug) DEBUG=true ;;
+        --owner_repo) OWNER_REPO="$2"; shift 2 ;;
+        --archive) ARCHIVE_FILE="$2"; shift 2 ;;
+        --pkg) PACKAGE_NAME="$2"; shift 2 ;;
+        --version) VERSION="$2"; shift 2 ;;
+        --archive_url) ARCHIVE_URL="$2"; shift 2 ;;
+        --checksum) CHECKSUM="$2"; shift 2 ;;
+        --description) DESCRIPTION="$2"; shift 2 ;;
+        --website) GIT_URL="$2"; shift 2 ;;
+        --debug) DEBUG=true; shift ;;
         -h|--help) print_usage; exit 0 ;;
         *) echo "Unknown option: $1"; print_usage; exit 1 ;;
     esac
-    shift
 done
 
 # Check required variables
