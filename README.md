@@ -1,8 +1,6 @@
 # Git Fetcher (`git-source` / `gsrc`)
 
-`git-source` (or `gsrc` for short) is a command-line tool to fetch archives, latest tags, or branches from Git repositories hosted on **GitHub, GitLab, Bitbucket, or Googlesource**.  
-
-It automates the retrieval of the latest version of a repository, saving archives locally, and supports listing branches.
+`git-source` (or `gsrc` for short) is a command-line tool to fetch archives, latest tags, or branches from Git repositories hosted on **GitHub, GitLab, Bitbucket, or Googlesource**.  It automates the retrieval of the latest version of a repository, saving archives locally.
 
 ---
 
