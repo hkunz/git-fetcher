@@ -89,12 +89,6 @@ tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR"
 TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)
 SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
 
-# Out-of-source build folder for CMake
-TMP_BUILD_DIR="$SOURCE_ROOT/build"
-
-decho "Extracted source to: $SOURCE_ROOT"
-decho "CMake build folder: $TMP_BUILD_DIR"
-
 # =============================================
 # Query CMake for all real options
 # =============================================
@@ -125,7 +119,64 @@ query_mxe_cmake_options() {
     done
 }
 
-query_mxe_cmake_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
+query_mxe_meson_options() {
+    local src_dir="$1"
+    local build_dir="$2"
+
+    if ! command -v meson >/dev/null 2>&1; then
+        echo "[WARN] Meson not found, skipping Meson options"
+        BUILD_OPTIONS=()
+        return
+    fi
+
+    if ! command -v ninja >/dev/null 2>&1; then
+        echo "[WARN] Ninja not found, Meson setup cannot run"
+        BUILD_OPTIONS=()
+        return
+    fi
+
+    rm -rf "$build_dir"
+    mkdir -p "$build_dir"
+    cd "$build_dir" || return 1
+
+    # Run setup with Ninja backend
+    meson setup . "$src_dir" --wipe --reconfigure --backend ninja > /dev/null || {
+        echo "[WARN] Meson setup failed, skipping option detection"
+        BUILD_OPTIONS=()
+        return
+    }
+
+    # Then configure
+    mapfile -t MESON_OPTIONS < <(
+        meson configure . \
+        | grep -E '^[A-Za-z0-9_]+:' \
+        | sed 's/:.*=/=/'
+    )
+
+    MESON_OPTIONS=($(printf '%s\n' "${MESON_OPTIONS[@]}" | sort -u))
+
+    echo "[INFO] Meson build options detected in $build_dir:"
+    for opt in "${MESON_OPTIONS[@]}"; do
+        echo "  $opt"
+    done
+
+    BUILD_OPTIONS=("${MESON_OPTIONS[@]}")
+}
+
+case "$BUILD_SYSTEM" in
+    CMake)
+        # Out-of-source build folder for CMake
+        TMP_BUILD_DIR="$SOURCE_ROOT/build"
+        decho "CMake build folder: $TMP_BUILD_DIR"
+        query_mxe_cmake_options "$SOURCE_ROOT" "$TMP_BUILD_DIR" ;;
+    Meson)
+        TMP_BUILD_DIR="$SOURCE_ROOT/build-meson"
+        decho "Meson build folder: $TMP_BUILD_DIR"
+        query_mxe_meson_options "$SOURCE_ROOT" "$TMP_BUILD_DIR" ;;
+    *)
+        iecho "Nothing to query for build system: $BUILD_SYSTEM"
+        ;;
+esac
 
 BUILD_OPTIONS_MULTILINE=""
 for opt in "${BUILD_OPTIONS[@]}"; do
