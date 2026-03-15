@@ -83,8 +83,7 @@ source scripts/git-source-completion.sh
 
 ## MXE Integration (Optional)
 
-`git-source` can generate MXE `.mk` files for use in your MXE project using the `--generate-mxe-makefile` option.
-If you want the generated files to be automatically copied into your MXE project, you can set the following environment variables **before running the generator**:
+The `git-source` command can generate MXE `.mk` files for use in your MXE project using the `--generate-mxe-makefile` or `--generate-mxe-makefile=libname`option. If you want the generated files to be automatically copied into your MXE project, you can set the following environment variables **before running the generator**:
 
 ```bash
 export MXE_ROOT="/path/to/your/mxe"  # Path to your MXE root directory

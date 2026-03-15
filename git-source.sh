@@ -38,7 +38,14 @@ while [[ $# -gt 0 ]]; do
         -b|--list-branches) LIST_BRANCHES=true ;;
         -v|--verbose) export VERBOSE=true ;;
         --debug) export DEBUG=true ;;
-        --generate-mxe-makefile) GENERATE_MXE=true ;;
+        --generate-mxe-makefile=*)
+            GENERATE_MXE=true
+            MXE_ARGS="${1#*=}"
+            ;;
+        --generate-mxe-makefile)
+            GENERATE_MXE=true
+            MXE_ARGS="default"
+            ;;
         --force) FORCE_DOWNLOAD=true ;;
         -h|--help) print_usage; exit 0 ;;
         -*) eecho "Unknown option: $1"; exit 1 ;;
@@ -156,6 +163,7 @@ iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 # =============================================
 if [[ "$GENERATE_MXE" == true ]]; then
     bash "$ROOT_DIR/contrib/mxe/scripts/generate_mxe_mk.sh" \
+        --mxe_args "$MXE_ARGS" \
         --owner_repo "$OWNER_REPO" \
         --archive "$ARCHIVE_FILE" \
         --pkg "$PACKAGE_NAME" \

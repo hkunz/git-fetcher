@@ -3,7 +3,7 @@
 .SH NAME
 git-source, gsrc \- fetch archives and tags from Git repositories
 
-.SYNOPSIS
+.SH SYNOPSIS
 .B git-source, gsrc
 [\fIOPTIONS\fR] <repo_url_or_owner/repo>
 
@@ -24,7 +24,7 @@ List all branches of the repository and exit.
 
 .TP
 .B -v, --verbose
-Show verbose messages for informational purposes.
+Show verbose informational messages.
 
 .TP
 .B --debug
@@ -32,7 +32,16 @@ Show debug messages for developers.
 
 .TP
 .B -h, --help
-Show a short help message.
+Show this help message.
+
+.TP
+.B --generate-mxe-makefile
+Generate an MXE .mk file for the repository using the default library name.
+
+.TP
+.B --generate-mxe-makefile=<libname>
+Generate an MXE .mk file for the repository, using the specified library name.
+If multiple comma-separated names are provided, only the first is used.
 
 .SH EXAMPLES
 .TP
@@ -47,56 +56,25 @@ $ git-source -b https://gitlab.com/oscore/liboscore
 Download with verbose messages:
 $ git-source -v https://github.com/google/farmhash
 
+.TP
+Generate an MXE .mk file for default library:
+$ git-source https://github.com/alembic/alembic --generate-mxe-makefile
+
+.TP
+Generate an MXE .mk file for a specific library:
+$ git-source https://github.com/alembic/alembic --generate-mxe-makefile=alembic
+
 .SH NOTES
 Googlesource repositories generate tarballs dynamically. The SHA256 checksum may differ
 between downloads even when the source code has not changed.
+
+If using MXE integration, you can optionally set the \fBMXE_ROOT\fR environment variable to
+your MXE root directory and \fBMXE_TARGET\fR to your target triplet. Generated .mk files
+will then be automatically copied into \fBMXE_ROOT/src/\fR. Existing files will prompt
+for overwrite.
 
 .SH AUTHOR
 Written by Harry Kunz aka Harry McKenzie
-
-.SH SEE ALSO
-git(1), curl(1), jq(1)
-
-
-The tool automatically detects the host from the URL and fetches the latest tag or default branch.
-Downloaded archives are saved under the \fBdownloads/\fR directory.
-
-.SH OPTIONS
-.TP
-.B -b, --list-branches
-List all branches of the repository and exit.
-
-.TP
-.B -v, --verbose
-Show verbose messages for informational purposes.
-
-.TP
-.B --debug
-Show debug messages for developers.
-
-.TP
-.B -h, --help
-Show a short help message.
-
-.SH EXAMPLES
-.TP
-Download the latest GitHub release:
-$ git-source https://github.com/alembic/alembic
-
-.TP
-List all branches of a GitLab repository:
-$ git-source -b https://gitlab.com/oscore/liboscore
-
-.TP
-Download with verbose messages:
-$ git-source -v https://github.com/google/farmhash
-
-.SH NOTES
-Googlesource repositories generate tarballs dynamically. The SHA256 checksum may differ
-between downloads even when the source code has not changed.
-
-.SH AUTHOR
-Written by Harry McKenzie
 
 .SH SEE ALSO
 git(1), curl(1), jq(1)

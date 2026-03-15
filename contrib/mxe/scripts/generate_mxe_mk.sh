@@ -13,9 +13,6 @@ TMP_DIR="$ROOT_DIR/tmp"
 source "$SCRIPT_DIR/lib.sh"
 source "$SCRIPT_DIR/lib-color.sh"
 
-# =============================================
-# Defaults / Options
-# =============================================
 ARCHIVE_FILE=""
 PACKAGE_NAME=""
 VERSION=""
@@ -29,7 +26,27 @@ DEBUG=false
 # Usage
 # =============================================
 print_usage() {
-    echo "Usage: $0 --owner_repo <owner/repo> --archive <file> --pkg <name> --version <ver> --archive_url <url> --checksum <sha256> --description <desc> --website <url> [--debug]"
+    echo "Usage: $0 [options]"
+    echo
+    echo "Options:"
+    echo "  --mxe_args <libname>          Optional: library name for MXE .mk generation"
+    echo "                                If omitted, defaults to 'default' (generate defaults)"
+    echo "  --owner_repo <owner/repo>     GitHub owner/repo"
+    echo "  --archive <file>              Local archive file"
+    echo "  --pkg <name>                  Package name"
+    echo "  --tag <tag>                   Git tag (optional)"
+    echo "  --version <version>           Package version"
+    echo "  --archive_url <url>           URL to download archive"
+    echo "  --checksum <sha256>           SHA256 checksum of archive"
+    echo "  --description <desc>          Package description"
+    echo "  --website <url>               Package website"
+    echo "  --debug                       Enable debug output"
+    echo "  -h, --help                    Show this help message"
+    echo
+    echo "Example:"
+    echo "  $0 --mxe_args alembic --owner_repo hkunz/git-fetcher --archive alembic.tar.gz \\"
+    echo "     --pkg alembic --version 1.0.0 --archive_url <url> --checksum <sha256> \\"
+    echo "     --description 'Alembic library' --website https://example.com"
 }
 
 # =============================================
@@ -38,6 +55,7 @@ print_usage() {
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --mxe_args) MXE_ARGS="$2"; shift 2 ;;
         --owner_repo) OWNER_REPO="$2"; shift 2 ;;
         --archive) ARCHIVE_FILE="$2"; shift 2 ;;
         --pkg) PACKAGE_NAME="$2"; shift 2 ;;
@@ -64,6 +82,14 @@ done
 
 # Load helper functions if they exist
 [[ -f "$SCRIPT_DIR/lib.sh" ]] && source "$SCRIPT_DIR/lib.sh"
+
+decho "Additional MXE args: $MXE_ARGS"
+if [[ "$MXE_ARGS" == "default" || -z "$MXE_ARGS" ]]; then
+    iecho "No package name provided; default generation with name $(bold_bright_green "$PACKAGE_NAME")"
+else
+    PACKAGE_NAME="${MXE_ARGS%%,*}"  # everything before first comma
+    iecho "Using package name: $(bold_bright_green "$PACKAGE_NAME")"
+fi
 
 # =============================================
 # Detect build system and files
