@@ -198,10 +198,10 @@ fi
 # =============================================
 # Generate .mk file
 # =============================================
-MXE_ROOT="$ROOT_DIR/contrib/mxe"
-OUTPUT_DIR="$MXE_ROOT/generated"
+GEN_MXE_ROOT="$ROOT_DIR/contrib/mxe"
+OUTPUT_DIR="$GEN_MXE_ROOT/generated"
 TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
-TEMPLATE="$MXE_ROOT/templates/mxe-template.mk"
+TEMPLATE="$GEN_MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_FILE="$OUTPUT_DIR/$PACKAGE_NAME.mk"
 IGNORE=""
 
@@ -277,13 +277,13 @@ iecho "Generated MXE .mk file: $OUTPUT_FILE"
 # =============================================
 # Generate test file
 # =============================================
-TEST_TEMPLATE="$MXE_ROOT/templates/test.lang.template"
+TEST_TEMPLATE="$GEN_MXE_ROOT/templates/test.lang.template"
 TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME}-test.$TEST_LANG"
 
 export TEST_LANG
 export PACKAGE_NAME
 export COMPILER=$([[ "$TEST_LANG" == "cpp" ]] && echo g++ || echo gcc)
-export TARGET=x86_64-w64-mingw32.static
+export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 export DEPENDENCIES="-l$PACKAGE_NAME"
 
 if [[ "$TEST_LANG" == "cpp" ]]; then
@@ -300,3 +300,26 @@ fi
 
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
+
+
+# =============================================
+# Copy generated files to MXE_ROOT/src with overwrite prompt
+# =============================================
+if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
+    for file in "$OUTPUT_FILE" "$TEST_FILE"; do
+        dest="$MXE_ROOT/src/$(basename "$file")"
+        if [[ -e "$dest" ]]; then
+            echo -e "$(bright_red "[PROMPT]") File exists: $(bright_yellow $dest)"
+            read -p "$(bright_red "[?]") Overwrite? $(bright_yellow "[y/N]") " answer
+            if [[ "$answer" =~ ^[Yy]$ ]]; then
+                cp "$file" "$dest"
+                iecho "Overwritten $dest"
+            else
+                iecho "Skipped $dest"
+            fi
+        else
+            cp "$file" "$dest"
+            iecho "Copied $file to $dest"
+        fi
+    done
+fi

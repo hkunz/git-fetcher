@@ -106,3 +106,38 @@ echo "You can now run:"
 echo "  gsrc -h"
 echo "  git-source -h"
 echo "  man git-source"
+
+# Optional MXE integration tip
+MXE_SUGGESTED="/path/to/your/mxe"  # fallback generic path
+
+# Base locations to search for MXE
+likely_dirs=(
+    "$HOME/mxe"
+    "$HOME/workspace/mxe"
+    "$HOME/projects/mxe"
+    "$HOME/source/mxe"
+    "$HOME/dev/mxe"
+    "$HOME/code/mxe"
+    "/opt/mxe"
+    "/dev/mxe"
+    "/usr/local/mxe"
+)
+
+# Detect existing MXE installation
+for base in "${likely_dirs[@]}"; do
+    for dir in "$base"*; do
+        if [[ -d "$dir/src" ]]; then
+            MXE_SUGGESTED="$dir"
+            break 2  # stop both loops after first match
+        fi
+    done
+done
+
+echo
+echo "Optional: to copy generated .mk files into your MXE project, set MXE_ROOT"
+echo "to your MXE root directory before running the generator:"
+echo "  export MXE_ROOT=\"$MXE_SUGGESTED\""
+echo "  export MXE_TARGET=\"x86_64-w64-mingw32.static\"  # optional override"
+echo "Then run the generator script with:"
+echo "  ./git-source.sh <repository> --generate-mxe-makefile"
+echo "This will copy the generated .mk files into \$MXE_ROOT/src/ automatically."

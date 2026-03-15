@@ -81,6 +81,16 @@ export MANPATH="$PREFIX/share/man:$MANPATH"
 source scripts/git-source-completion.sh
 ```
 
+## MXE Integration (Optional)
+
+`git-source` can generate MXE `.mk` files for use in your MXE project using the `--generate-mxe-makefile` option.
+If you want the generated files to be automatically copied into your MXE project, you can set the following environment variables **before running the generator**:
+
+```bash
+export MXE_ROOT="/path/to/your/mxe"  # Path to your MXE root directory
+export MXE_TARGET="x86_64-w64-mingw32.static"  # Target triplet (optional, defaults to x86_64-w64-mingw32.static)
+```
+
 ## Uninstallation
 
 To remove installed files, use the `uninstall.sh` script with the same prefix you used for installation:
