@@ -13,6 +13,8 @@ TMP_DIR="$ROOT_DIR/tmp"
 source "$SCRIPT_DIR/lib.sh"
 source "$SCRIPT_DIR/lib-color.sh"
 
+iecho "Preparing MXE Makefile for the target library..."
+
 ARCHIVE_FILE=""
 PACKAGE_NAME=""
 VERSION=""
@@ -79,6 +81,8 @@ for var in ARCHIVE_FILE PACKAGE_NAME VERSION ARCHIVE_URL CHECKSUM DESCRIPTION GI
         exit 1
     fi
 done
+
+iecho "======================= MXE Generation ======================="
 
 # Load helper functions if they exist
 [[ -f "$SCRIPT_DIR/lib.sh" ]] && source "$SCRIPT_DIR/lib.sh"
@@ -266,6 +270,8 @@ ARCHIVE_FORMAT=""
 if [[ -n "$TAG_PREFIX" ]]; then
     ARCHIVE_FORMAT=",${TAG_PREFIX}"
 fi
+
+iecho "---------------------------------------------------------------"
 
 sed \
 ${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
