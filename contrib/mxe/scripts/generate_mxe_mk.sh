@@ -316,6 +316,7 @@ if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
                 iecho "Overwritten $dest"
             else
                 iecho "Skipped $dest"
+                break
             fi
         else
             cp "$file" "$dest"
