@@ -159,6 +159,7 @@ if [[ "$GENERATE_MXE" == true ]]; then
         --owner_repo "$OWNER_REPO" \
         --archive "$ARCHIVE_FILE" \
         --pkg "$PACKAGE_NAME" \
+        --tag "$TAG" \
         --version "$VERSION" \
         --archive_url "$ARCHIVE_URL" \
         --checksum "$CHECKSUM" \

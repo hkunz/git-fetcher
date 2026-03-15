@@ -41,6 +41,7 @@ while [[ $# -gt 0 ]]; do
         --owner_repo) OWNER_REPO="$2"; shift 2 ;;
         --archive) ARCHIVE_FILE="$2"; shift 2 ;;
         --pkg) PACKAGE_NAME="$2"; shift 2 ;;
+        --tag) TAG="$2"; shift 2 ;;
         --version) VERSION="$2"; shift 2 ;;
         --archive_url) ARCHIVE_URL="$2"; shift 2 ;;
         --checksum) CHECKSUM="$2"; shift 2 ;;
@@ -234,12 +235,19 @@ if [[ -n "$PC_FILE" && -s "$TMP_DIR/$PC_FILE" ]]; then
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
 fi
 
+TAG_PREFIX="${TAG%%[0-9]*}"
+ARCHIVE_FORMAT=""
+if [[ -n "$TAG_PREFIX" ]]; then
+    ARCHIVE_FORMAT=",${TAG_PREFIX}"
+fi
+
 sed \
 ${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
 ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 ${DELETE_PC_BLOCK:+-e "$DELETE_PC_BLOCK"} \
 ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
+-e "s|\${ARCHIVE_FORMAT}|$ARCHIVE_FORMAT|g" \
 -e "s|\${PACKAGE}|$PACKAGE_NAME|g" \
 -e "s|\${WEBSITE}|$GIT_URL|g" \
 -e "s|\${VERSION}|$VERSION|g" \
