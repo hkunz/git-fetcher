@@ -28,6 +28,7 @@ define $(PKG)_BUILD
 			-DCMAKE_INSTALL_PREFIX='$(PREFIX)/$(TARGET)' \
 			-DCMAKE_PREFIX_PATH='$(PREFIX)/$(TARGET)' \
 			-DBUILD_SHARED_LIBS=$(CMAKE_SHARED_BOOL) \
+			-DBUILD_STATIC_LIBS=$(CMAKE_STATIC_BOOL) \  # Optional: Build static libs (less common, many projects prefer shared libraries)
 			-DCMAKE_BUILD_TYPE=Release \
 
 	$(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
