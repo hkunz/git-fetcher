@@ -2,21 +2,21 @@
 
 include src/common/pkgutils.mk
 
-pkg				:= libname
-$(PKG)_WEBSITE	:= https://github.com/repository/libname
-$(PKG)_DESCR	:= Example C++ library for MXE package template
-$(PKG)_VERSION	:= 1.2.3  # example tag version; use 'master' or 'main' if the project has no tags or fork project and create a tag
-$(PKG)_CHECKSUM	:= XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+pkg             := libname
+$(PKG)_WEBSITE  := https://github.com/repository/libname
+$(PKG)_DESCR    := Example C++ library for MXE package template
+$(PKG)_VERSION  := 1.2.3  # example tag version; use 'master' or 'main' if the project has no tags or fork project and create a tag
+$(PKG)_CHECKSUM := XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # GitHub-hosted packages: (remove if not GitHub-hosted)
-$(PKG)_GH_CONF 	:= repository/libname/tags,v  # Git-style tag path; keep ',v' only if the repository prepends 'v' to tags (e.g., v1.2.3)
+$(PKG)_GH_CONF  := repository/libname/tags,v  # Git-style tag path; keep ',v' only if the repository prepends 'v' to tags (e.g., v1.2.3)
 
 # Non-GitHub packages: (remove the following 3 lines if GitHub-hosted)
-$(PKG)_URL		:= https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
-$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)  # folder name after extracting archive
-$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz  # downloaded archive file name
+$(PKG)_URL      := https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
+$(PKG)_SUBDIR   := $(PKG)-$($(PKG)_VERSION)  # folder name after extracting archive
+$(PKG)_FILE     := $(PKG)-$($(PKG)_VERSION).tar.gz  # downloaded archive file name
 
-$(PKG)_DEPS		:= cc libname1 libname2 libname3
+$(PKG)_DEPS     := cc libname1 libname2 libname3
 
 define $(PKG)_BUILD
 

@@ -4,21 +4,21 @@
 include src/common/pkgutils.mk
 # END_INCLUDE
 
-PKG				:= ${PACKAGE}
-$(PKG)_WEBSITE	:= ${WEBSITE}
-$(PKG)_DESCR	:= ${DESCRIPTION}
-$(PKG)_VERSION	:= ${VERSION}
-$(PKG)_IGNORE	:= ${IGNORE}
-$(PKG)_CHECKSUM	:= ${CHECKSUM}
+PKG             := ${PACKAGE}
+$(PKG)_WEBSITE  := ${WEBSITE}
+$(PKG)_DESCR    := ${DESCRIPTION}
+$(PKG)_VERSION  := ${VERSION}
+$(PKG)_IGNORE   := ${IGNORE}
+$(PKG)_CHECKSUM := ${CHECKSUM}
 # BEGIN_GITHUB
-$(PKG)_GH_CONF 	:= ${OWNER_REPO}/tags,v
+$(PKG)_GH_CONF  := ${OWNER_REPO}/tags,v
 # END_GITHUB
 # BEGIN_NON_GITHUB
-$(PKG)_URL		:= ${ARCHIVE_URL}
-$(PKG)_SUBDIR	:= $(PKG)-$($(PKG)_VERSION)
-$(PKG)_FILE		:= $(PKG)-$($(PKG)_VERSION).tar.gz
+$(PKG)_URL      := ${ARCHIVE_URL}
+$(PKG)_SUBDIR   := $(PKG)-$($(PKG)_VERSION)
+$(PKG)_FILE     := $(PKG)-$($(PKG)_VERSION).tar.gz
 # END_NON_GITHUB
-$(PKG)_DEPS		:= ${DEPENDENCIES}
+$(PKG)_DEPS     := ${DEPENDENCIES}
 
 define $(PKG)_BUILD
 
