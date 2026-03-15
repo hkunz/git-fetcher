@@ -156,6 +156,29 @@ query_mxe_cmake_options() {
 }
 
 # =============================================
+# Extract all CMake dependencies from CMakeLists.txt and .cmake files
+# =============================================
+extract_cmake_dependencies() {
+    local files=("$@")
+    local dep_list=()
+    num_files=${#files[@]}
+    iecho "[INFO] Parsing $num_files CMake files for dependencies..."
+
+    for file in "${files[@]}"; do
+        [[ -z "$file" || ! -f "$file" ]] && continue
+
+        # Use grep + perl regex to extract the first argument of find_package/find_dependency
+        while IFS= read -r dep; do
+            dep_list+=("$dep")
+        done < <(grep -i 'find_\(package\|dependency\)' "$file" | \
+                 sed -E 's/^[[:space:]]*find_(package|dependency)[[:space:]]*\([[:space:]]*([^ )]+).*/\2/I')
+    done
+
+    # Deduplicate and sort
+    DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sort -u))
+}
+
+# =============================================
 # Query Meson for all real options
 # =============================================
 query_mxe_meson_options() {
@@ -201,7 +224,21 @@ case "$BUILD_SYSTEM" in
     CMake)
         TMP_BUILD_DIR="$SOURCE_ROOT/build"
         decho "CMake build folder: $TMP_BUILD_DIR"
-        query_mxe_cmake_options "$SOURCE_ROOT" "$TMP_BUILD_DIR" ;;
+        query_mxe_cmake_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
+        FILES_TO_PARSE=()
+        [[ -n "$MAIN_FILE" ]] && FILES_TO_PARSE+=("$TMP_DIR/$MAIN_FILE")
+        if [[ -n "$OTHER_FILES" ]]; then
+            while IFS= read -r f; do
+                [[ -n "$f" && -f "$TMP_DIR/$f" ]] && FILES_TO_PARSE+=("$TMP_DIR/$f")
+            done <<< "$OTHER_FILES"
+        fi
+        extract_cmake_dependencies "${FILES_TO_PARSE[@]}"
+        decho "Detected CMake dependencies:"
+        for dep in "${DEPENDENCIES[@]}"; do
+            decho --no-prefix "  $dep"
+        done
+        decho --no-prefix "}"
+        ;;
     Meson)
         TMP_BUILD_DIR="$SOURCE_ROOT/build-meson"
         decho "Meson build folder: $TMP_BUILD_DIR"

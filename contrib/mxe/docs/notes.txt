@@ -5,3 +5,8 @@ https://github.com/keepassx/keepassx.git - CMake
 https://aomedia.googlesource.com/aom/ - CMake
 https://github.com/alembic/alembic - CMake
 https://github.com/Netflix/vmaf - Meson
+
+
+sudo apt install 
+dot -Tpng deps.dot -o deps.png
+cmake --graphviz=deps.dot .
