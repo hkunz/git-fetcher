@@ -88,7 +88,7 @@ The `git-source` command can generate MXE `.mk` files for use in your MXE projec
 ```bash
 export MXE_ROOT="/path/to/your/mxe"  # Path to your MXE root directory
 export MXE_TARGET="x86_64-w64-mingw32.static"  # Target triplet (optional, defaults to x86_64-w64-mingw32.static)
-export GITHUB_TOKEN=\"<your_token_here>\"  # optional, avoids API rate limits"
+export GITHUB_TOKEN="<your_token_here>"  # optional, avoids API rate limits"
 ```
 
 ## Uninstallation
