@@ -248,6 +248,10 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
+PC_FILE_LIBS=$(printf ' -l%s' "${DEPENDENCIES[@]}" | sed -E 's/lib//Ig' | cut -c2-)
+MXE_DEPENDENCIES=("cc" "${DEPENDENCIES[@]}")
+MXE_DEPENDENCIES=$(echo "${MXE_DEPENDENCIES[*]}" | sed -E "s/\b(lib)?alembic\b//Ig" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
+
 BUILD_OPTIONS_MULTILINE=""
 for opt in "${BUILD_OPTIONS[@]}"; do
     BUILD_OPTIONS_MULTILINE+=$'\t\t-D'"$opt"$' \\\n'
@@ -324,6 +328,8 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${ARCHIVE_URL}|$ARCHIVE_URL|g" \
 -e "s|\${IGNORE}|$IGNORE|g" \
 -e "s|\${CHECKSUM}|$CHECKSUM|g" \
+-e "s|\${DEPENDENCIES}|$MXE_DEPENDENCIES|g" \
+-e "s|\${LIBS}|$PC_FILE_LIBS|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
 -e "/# BEGIN_NON_GITHUB/d" \
