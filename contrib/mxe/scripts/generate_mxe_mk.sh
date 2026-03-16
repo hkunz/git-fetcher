@@ -242,7 +242,10 @@ case "$BUILD_SYSTEM" in
     Meson)
         TMP_BUILD_DIR="$SOURCE_ROOT/build-meson"
         decho "Meson build folder: $TMP_BUILD_DIR"
-        query_mxe_meson_options "$SOURCE_ROOT" "$TMP_BUILD_DIR" ;;
+        query_mxe_meson_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
+        # TODO: get meson project dependencies
+        DEPENDENCIES=("meson-wrapper" "${DEPENDENCIES[@]}")
+        ;;
     *)
         iecho "Nothing to query for build system: $BUILD_SYSTEM"
         ;;
