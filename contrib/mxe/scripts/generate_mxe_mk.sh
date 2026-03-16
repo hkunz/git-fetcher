@@ -92,6 +92,7 @@ if [[ "$MXE_ARGS" == "default" || -z "$MXE_ARGS" ]]; then
     iecho "No package name provided; default generation with name $(bold_bright_green "$PACKAGE_NAME")"
 else
     PACKAGE_NAME="${MXE_ARGS%%,*}"  # everything before first comma
+    PACKAGE_NAME="${PACKAGE_NAME%.mk}"
     iecho "Using package name: $(bold_bright_green "$PACKAGE_NAME")"
 fi
 
