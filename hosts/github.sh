@@ -30,7 +30,16 @@ fetch_latest_github() {
     # 1. Try latest GitHub release
     # ---------------------------------------
     decho "Checking latest release..."
-    tag=$(curl -s "$api/releases/latest" | jq -r '.tag_name // empty')
+    headers=($(curl_headers "$api"))
+    decho "Using headers for $api:"
+    for h in "${headers[@]}"; do
+        if [[ $h == Authorization:* ]]; then
+            decho "  Authorization: [REDACTED]"
+        else
+            decho "  $h"
+        fi
+    done
+    tag=$(curl -s "${headers[@]}" "$api/releases/latest" | jq -r '.tag_name // empty')
     decho "Release tag: '$tag'"
 
     # ---------------------------------------
@@ -38,9 +47,8 @@ fetch_latest_github() {
     # ---------------------------------------
     if [[ -z "$tag" || "$tag" == "null" ]]; then
         decho "No releases found, checking tags..."
-
         tag=$(
-            curl -s "$api/tags?per_page=100" \
+            curl -s "${headers[@]}" "$api/tags?per_page=100" \
             | jq -r '.[].name' \
             | grep -E '[0-9]' \
             | sort -V \
@@ -55,7 +63,7 @@ fetch_latest_github() {
 
     if [[ -n "$tag" ]]; then
         # Try GitHub release asset first
-        release_url=$(curl -s "$api/releases/tags/$tag" | jq -r '.assets[0].browser_download_url // empty')
+        release_url=$(curl -s "${headers[@]}" "$api/releases/tags/$tag" | jq -r '.assets[0].browser_download_url // empty')
         if [[ -n "$release_url" ]]; then
             # urls+=("$release_url")  # don't add because releases sometimes are or contain binaries
             GH_MODE="releases"
@@ -65,7 +73,7 @@ fetch_latest_github() {
 
     else
         # No tag found, fallback to default branch
-        branch=$(curl -s "$api" | jq -r '.default_branch // "main"')
+        branch=$(curl -s "${headers[@]}" "$api" | jq -r '.default_branch // "main"')
         urls+=("https://github.com/$owner_repo/archive/refs/heads/$branch.tar.gz")
         # GH_MODE="branches"  # tags also worked in MXE when the branch was master/main
         wecho "Warning: no releases or tags found for $owner_repo — using branch '$branch'"
@@ -73,14 +81,14 @@ fetch_latest_github() {
 
     # Pick first valid URL
     for u in "${urls[@]}"; do
-        if [[ -n "$u" ]] && curl --head --silent --fail "$u" >/dev/null; then
+        if [[ -n "$u" ]] && curl --head --silent --fail "${headers[@]}" "$u" >/dev/null; then
             ARCHIVE_URL="$u"
             [[ "$u" == *"/heads/"* ]] && TAG="" && BRANCH="$branch"
             break
         fi
     done
 
-    DESCRIPTION=$(curl -s "$api" | jq -r '.description // ""')
+    DESCRIPTION=$(curl -s "${headers[@]}" "$api" | jq -r '.description // ""')
     GH_MODE="tags"  # Always use tags; even branches like master/main are handled as tags, because releases may contain binaries instead of source
 
     decho "TAG set to: $TAG"

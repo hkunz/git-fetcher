@@ -181,3 +181,5 @@ if [[ "$GENERATE_MXE" == true ]]; then
         --website "$GIT_URL" \
         $( [[ "$DEBUG" == true ]] && echo --debug )
 fi
+
+iecho "Completed"

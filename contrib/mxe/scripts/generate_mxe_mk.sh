@@ -115,9 +115,8 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 # Extract the entire archive
 # =============================================
 mkdir -p "$TMP_DIR"
-echo "HERE ==? $ARCHIVE_FILE === "$TMP_DIR""
+
 tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR"
-echo "DONE?"
 
 TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)  # Detect top-level folder (source root)
 SOURCE_ROOT="$TMP_DIR/$TOP_DIR"

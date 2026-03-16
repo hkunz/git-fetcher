@@ -2,6 +2,29 @@
 # lib.sh — shared helper functions for git-fetcher
 
 # =============================================
+# Optional GitHub token header for API requests
+# Optional GitHub authentication and headers
+# =============================================
+
+GITHUB_HEADERS=(-A "git-fetcher-script")  # default User-Agent
+
+if [[ -n "$GITHUB_TOKEN" ]]; then
+    GITHUB_HEADERS+=(-H "Authorization: token $GITHUB_TOKEN")
+fi
+
+curl_headers() {
+    return  # early exit; does nothing for now
+
+    # --- real logic for later ---
+    local url="$1"
+    local headers=()
+    if [[ "$url" =~ github\.com ]]; then
+        headers=("${GITHUB_HEADERS[@]}")
+    fi
+    echo "${headers[@]}"
+}
+
+# =============================================
 # Check HTTP status of a URL
 # Arguments: $1 - URL
 # Exits if not 200
@@ -9,7 +32,10 @@
 check_http() {
     local url="$1"
     local code
-    code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+    local headers
+    # store headers in an array
+    headers=($(curl_headers "$url"))
+    code=$(curl -s -o /dev/null -w "%{http_code}" "${headers[@]}" "$url")
     if [ "$code" -ne 200 ]; then
         eecho "Cannot access $url (HTTP $code)"
         exit 1
@@ -31,7 +57,8 @@ download_archive() {
     iecho "Downloading from URL: $url"
     iecho "Saving to local file: $file"
 
-    curl -L "$url" -o "$file"
+    headers=($(curl_headers "$url"))
+    curl -L "${headers[@]}" "$url" -o "$file"
 
    # detect archive type
     local filetype
