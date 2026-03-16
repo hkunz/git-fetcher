@@ -64,3 +64,11 @@ resolve_archive() {
     decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
     decho "DESCRIPTION  = '$DESCRIPTION'"
 }
+
+resolve_specific_ref() {
+    local owner_repo="$1"
+    local ref_name="$2"
+
+    eecho "Error: --ref is only supported for GitHub at the moment (host='$HOST')"
+    return 1
+}

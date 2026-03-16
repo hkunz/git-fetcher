@@ -127,3 +127,21 @@ set_archive_info() {
     ARCHIVE_FILE="$(basename "$repo")-${version}.tar.gz"
     DESCRIPTION="${DESCRIPTION:-No description available}"
 }
+
+# ==============================
+# Validate if commit exists
+# ==============================
+check_commit_exists() {
+    local url="$1"
+    local headers
+    headers=($(curl_headers "$url"))
+
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" "${headers[@]}" -L -I "$url")
+
+    if [[ "$code" =~ ^2 ]]; then
+        return 0  # commit exists
+    else
+        return 1  # commit does not exist
+    fi
+}

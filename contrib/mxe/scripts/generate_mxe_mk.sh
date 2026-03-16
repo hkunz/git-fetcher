@@ -45,10 +45,7 @@ print_usage() {
     echo "  --debug                       Enable debug output"
     echo "  -h, --help                    Show this help message"
     echo
-    echo "Example:"
-    echo "  $0 --mxe_args alembic --owner_repo hkunz/git-fetcher --archive alembic.tar.gz \\"
-    echo "     --pkg alembic --version 1.0.0 --archive_url <url> --checksum <sha256> \\"
-    echo "     --description 'Alembic library' --website https://example.com"
+    echo "Example: No example"
 }
 
 # =============================================

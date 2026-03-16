@@ -59,3 +59,46 @@ resolve_archive() {
     decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
     decho "DESCRIPTION  = '$DESCRIPTION'"
 }
+
+resolve_specific_ref() {
+    local owner_repo="$1"
+    local ref_name="$2"
+
+    local git_url="https://github.com/$owner_repo.git"
+    DESCRIPTION="Custom ref ${ref_name:0:7} (no upstream description)"
+
+    vecho "Resolving specific ref: $ref_name"
+    # Branch
+    if git ls-remote --heads "$git_url" "$ref_name" | grep -q "$ref_name"; then
+        BRANCH="$ref_name"
+        TAG=""
+        REF_NAME=""
+        ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/heads/$BRANCH.tar.gz"
+        return 0
+    fi
+
+    # Tag
+    if git ls-remote --tags "$git_url" "$ref_name" | grep -q "$ref_name"; then
+        TAG="$ref_name"
+        BRANCH=""
+        REF_NAME=""
+        ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/tags/$TAG.tar.gz"
+        return 0
+    fi
+
+    # Commit hash
+    if [[ "$ref_name" =~ ^[0-9a-f]{7,40}$ ]]; then
+        commit_url="https://github.com/$owner_repo/commit/$ref_name"
+        if ! check_commit_exists "$commit_url"; then
+            eecho "Error: commit '$ref_name' does not exist in $owner_repo"
+            return 1
+        fi
+        TAG=""
+        BRANCH=""
+        REF_NAME="$ref_name"
+        ARCHIVE_URL="https://github.com/$owner_repo/archive/$ref_name.tar.gz"
+        return 0
+    fi
+    eecho "Error: ref '$ref_name' not found in $owner_repo"
+    return 1
+}

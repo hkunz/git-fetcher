@@ -50,14 +50,14 @@ while [[ $# -gt 0 ]]; do
             MXE_ARGS="default"
             ;;
         --ref=*)
-            REF_NAME="${1#*=}"
+            REQUESTED_REF_NAME="${1#*=}"
             ;;
         --ref)
             if [[ -z "$2" || "$2" == -* ]]; then
                 eecho "Error: --ref requires a branch, tag, or commit"
                 exit 1
             fi
-            REF_NAME="$2"
+            REQUESTED_REF_NAME="$2"
             shift
             ;;
         --force) FORCE_DOWNLOAD=true ;;
@@ -125,13 +125,64 @@ load_from_db() {
     DESCRIPTION=$(get_entry_field '.description')
     TAG=$(get_entry_field '.latest_tag')
     BRANCH=$(get_entry_field '.default_branch')
+    REF_NAME=$(get_entry_field '.ref_name')
     CHECKSUM=$(get_entry_field '.sha256')
     BUILD_SYSTEM=$(get_entry_field '.build_system')
 }
 
-download_archive_if_needed() {
+# =============================================
+# Determine type of requested ref
+# =============================================
+get_ref_type() {
+    local ref="$1"
+    if [[ -z "$ref" ]]; then
+        echo ""
+    elif [[ "$ref" =~ ^[0-9a-f]{7,40}$ ]]; then
+        echo "commit"
+    elif [[ "$ref" =~ ^v?[0-9]+([._-][0-9]+)*$ ]]; then
+        echo "tag"
+    else
+        echo "branch"
+    fi
+}
 
-    ARCHIVE_VERSION="${TAG:-$BRANCH}"
+# =============================================
+# Decide whether we need to redownload
+# =============================================
+should_redownload() {
+    if [[ "$FORCE_DOWNLOAD" == true ]]; then
+        return 0
+    fi
+    if [[ -z "$entry" || ! -f "$ARCHIVE_FILE_DB" ]]; then
+        return 0
+    fi
+    if [[ -z "$REQUESTED_REF_NAME" ]]; then
+        return 1  # no ref specified, DB is fine
+    fi
+
+    local ref_type
+    ref_type=$(get_ref_type "$REQUESTED_REF_NAME")
+
+    case "$ref_type" in
+        commit)
+            [[ "$REQUESTED_REF_NAME" != "$(get_entry_field '.ref_name')" ]] && return 0
+            ;;
+        tag)
+            [[ "$REQUESTED_REF_NAME" != "$(get_entry_field '.latest_tag')" ]] && return 0
+            ;;
+        branch)
+            [[ "$REQUESTED_REF_NAME" != "$(get_entry_field '.default_branch')" ]] && return 0
+            ;;
+    esac
+
+    return 1  # cache matches requested ref
+}
+
+# =============================================
+# Download archive if needed
+# =============================================
+download_archive_if_needed() {
+    ARCHIVE_VERSION="${TAG:-$BRANCH:-$REF_NAME}"
     ARCHIVE_NAME="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_NAME"
     PACKAGE_NAME="$(basename "$OWNER_REPO")"
@@ -141,26 +192,41 @@ download_archive_if_needed() {
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
     JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
     BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
-    update_db "$GIT_URL" "$TAG" "$BRANCH" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
+
+    if [[ -n "$REF_NAME" ]]; then
+        # custom ref → both TAG and BRANCH empty
+        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
+    else
+        update_db "$GIT_URL" "$TAG" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
+    fi
 }
 
-# Decide whether to use DB or download
+# =============================================
+# Main logic
+# =============================================
 ARCHIVE_FILE_DB=$(get_entry_field '.archive')
-if [[ -n "$entry" && -f "$ARCHIVE_FILE_DB" && "$FORCE_DOWNLOAD" == false ]]; then
-    load_from_db
-    iecho "Download URL: $ARCHIVE_URL"
-    iecho "Using archive from DB: $ARCHIVE_FILE"
-else
-    resolve_archive $OWNER_REPO
+load_from_db
+
+if should_redownload; then
+    if [[ -n "$REQUESTED_REF_NAME" ]]; then
+        resolve_specific_ref "$OWNER_REPO" "$REQUESTED_REF_NAME"
+    else
+        resolve_archive "$OWNER_REPO"
+    fi
     download_archive_if_needed
     iecho "Downloaded archive: $ARCHIVE_FILE"
+else
+    iecho "Download URL: $ARCHIVE_URL"
+    iecho "Using archive from DB: $ARCHIVE_FILE"
 fi
 
-# Show tag or branch
-if [ -n "$TAG" ]; then
+# Show tag, branch, or commit
+if [[ -n "$TAG" ]]; then
     iecho "Latest Tag: $(bold_bright_green "$TAG")"
-else
+elif [[ -n "$BRANCH" ]]; then
     iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag found)"
+elif [[ -n "$REF_NAME" ]]; then
+    iecho "Commit/Custom Ref: $(bold_bright_green "$REF_NAME")"
 fi
 
 # =============================================
@@ -168,18 +234,30 @@ fi
 # =============================================
 iecho "Downloaded file: $(bold_bright_cyan "$ARCHIVE_NAME")"
 iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
+
 [ -n "$DESCRIPTION" ] && iecho "Package description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
 
 # Determine version: Extract version from tag robustly (dots, underscores, or dashes)
-if [ -n "$TAG" ]; then
+if [[ -n "$TAG" ]]; then
+    # extract version from tag
     if [[ "$TAG" =~ ([0-9]+([._-][0-9]+)+) ]]; then
         VERSION="${BASH_REMATCH[1]}"
-        VERSION="${VERSION//[_-]/.}"  # normalize separators to dots
+        VERSION="${VERSION//[_-]/.}"
     else
         VERSION="$TAG"
     fi
-else
+elif [[ -n "$BRANCH" ]]; then
     VERSION="$BRANCH"
+elif [[ -n "$REF_NAME" ]]; then
+    # commit SHA or custom ref → use first 7 chars
+    VERSION="${REF_NAME:0:7}"
+else
+    VERSION="unknown"
+fi
+
+# If description is empty (custom ref, branch, tag, or commit), set placeholder
+if [[ -z "$DESCRIPTION" ]]; then
+    DESCRIPTION="No description available when using --ref option"
 fi
 
 iecho "Version: $(bold_bright_cyan "$VERSION")"

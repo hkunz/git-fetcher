@@ -10,7 +10,7 @@ https://gitlab.com/gitlab-tests/sample-projects - Gitlab
 https://gitlab.com/gitlab-org/gitlab-runner - Gitlab
 
 
-https://github.com/webmproject/sjpeg - CMake (main branch only)
+https://github.com/webmproject/sjpeg - CMake (main branch only) commit f8a007460e4af6a865dca3974f6ef4ba8ad4567b
 
 
 sudo apt install 
