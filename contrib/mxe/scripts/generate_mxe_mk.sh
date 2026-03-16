@@ -310,6 +310,7 @@ if [[ -n "$PC_FILE" && -s "$TMP_DIR/$PC_FILE" ]]; then
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
 fi
 
+GH_MODE="tags"
 TAG_PREFIX="${TAG%%[0-9]*}"
 ARCHIVE_FORMAT=""
 if [[ -n "$TAG_PREFIX" ]]; then
@@ -324,6 +325,7 @@ ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 ${DELETE_PC_BLOCK:+-e "$DELETE_PC_BLOCK"} \
 ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
+-e "s|\${GH_MODE}|$GH_MODE|g" \
 -e "s|\${ARCHIVE_FORMAT}|$ARCHIVE_FORMAT|g" \
 -e "s|\${PACKAGE}|$PACKAGE_NAME|g" \
 -e "s|\${WEBSITE}|$GIT_URL|g" \

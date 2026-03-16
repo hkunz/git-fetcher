@@ -9,7 +9,8 @@ $(PKG)_VERSION  := 1.2.3  # example tag version; use 'master' or 'main' if the p
 $(PKG)_CHECKSUM := XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 # GitHub-hosted packages: (remove if not GitHub-hosted)
-$(PKG)_GH_CONF  := repository/libname/tags,v  # Git-style tag path; keep ',v' only if the repository prepends 'v' to tags (e.g., v1.2.3)
+$(PKG)_GH_MODE  := tags  # possible values: branches|releases|tags
+$(PKG)_GH_CONF  := repository/libname/$(PKG)_GH_MODE,v  # Git-style tag path; keep ',v' only if the repository prepends 'v' to tags (e.g., v1.2.3)
 
 # Non-GitHub packages: (remove the following 3 lines if GitHub-hosted)
 $(PKG)_URL      := https://example.com/$(PKG)/archive/v$($(PKG)_VERSION).tar.gz
