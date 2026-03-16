@@ -6,6 +6,10 @@ https://aomedia.googlesource.com/aom/ - CMake
 https://github.com/alembic/alembic - CMake
 https://github.com/Netflix/vmaf - Meson
 
+https://gitlab.com/gitlab-tests/sample-projects - Gitlab
+https://gitlab.com/gitlab-org/gitlab-runner - Gitlab
+
+
 https://github.com/webmproject/sjpeg - CMake (main branch only)
 
 

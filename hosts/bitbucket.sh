@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # hosts/bitbucket.sh
-# Example: https://bitbucket.org/fargo3d/public
+# Example: https://bitbucket.org/atlassian/amps
 
 detect_host() {
     local url="$1"
@@ -14,48 +14,52 @@ detect_host() {
 }
 
 fetch_latest_bitbucket() {
-    local owner_repo="$1"  # e.g., "atlassian/python-bitbucket"
+    local owner_repo="$1"
 
     vecho "Checking repository: $owner_repo"
 
-    # Split owner and repo
     local owner repo
     owner="${owner_repo%%/*}"
     repo="${owner_repo##*/}"
 
     local api="https://api.bitbucket.org/2.0/repositories/$owner/$repo"
 
-    # Ensure repository exists
     local status
     status=$(curl -s -o /dev/null -w "%{http_code}" "$api")
     if [ "$status" -ne 200 ]; then
-        iecho "Error: Cannot access $owner_repo on Bitbucket (HTTP $status)"
+        eecho "Cannot access $owner_repo on Bitbucket (HTTP $status)"
         exit 1
     fi
-    vecho "Repository is reachable (HTTP $status)"
+    iecho "Repository is reachable (HTTP $status)"
+    decho "Fetching all tags from Bitbucket API..."
 
-    # Try to get latest tag
-    decho "Fetching tags from Bitbucket API..."
-    local tag
-    tag=$(curl -s "$api/refs/tags?pagelen=1&sort=-target.date" | jq -r '.values[0].name // empty')
-    decho "Raw latest tag from API: '$tag'"
+    local tags_json tags tag
+    tags_json=$(curl -s "$api/refs/tags?pagelen=100")   # fetch first 100 tags
+    tags=$(echo "$tags_json" | jq -r '.values[].name')
 
-    if [ -n "$tag" ]; then
+    if [[ -n "$tags" ]]; then
+        tag=$(echo "$tags" | sort -V | tail -n1)  # semantically latest
+        decho "All tags fetched: $(echo "$tags" | tr '\n' ' ')"
+        decho "Latest semantic tag: '$tag'"
+
         TAG="$tag"
         BRANCH=""
         ARCHIVE_URL="https://bitbucket.org/$owner_repo/get/$tag.tar.gz"
-        vecho "Constructed archive URL: $ARCHIVE_URL"
+        vecho "Constructed archive URL for tag: $ARCHIVE_URL"
     else
+        decho "No tags found, using main branch..."
         TAG=""
-        BRANCH=$(curl -s "$api" | jq -r '.mainbranch.name // empty')
+        BRANCH=$(curl -s "$api" | jq -r '.mainbranch.name // "main"')
         ARCHIVE_URL="https://bitbucket.org/$owner_repo/get/$BRANCH.tar.gz"
-        vecho "Constructed archive URL for branch: $ARCHIVE_URL"
+        wecho "No tags found for $owner_repo — using branch '$BRANCH'"
     fi
 
     ARCHIVE_FILE="$(basename "$repo")-${TAG:-$BRANCH}.tar.gz"
+    DESCRIPTION=$(curl -s "$api" | jq -r '.description // ""')
+
     decho "TAG          = '$TAG'"
     decho "BRANCH       = '$BRANCH'"
     decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
     decho "ARCHIVE_URL  = '$ARCHIVE_URL'"
-    DESCRIPTION=$(curl -s "$api" | jq -r '.description // ""')
+    decho "DESCRIPTION  = '$DESCRIPTION'"
 }

@@ -113,7 +113,6 @@ download_archive() {
         tar -c${tflag}f "$file" -C "$tmpdir" "$name"
         rm -rf "$tmpdir"
     fi
-
     vecho "Download finished successfully: $file"
 }
 
@@ -152,7 +151,6 @@ deduce_gh_mode() {
     elif [[ "$url" == *"/heads/"* ]]; then
         mode="branches"
     fi
-
     echo "$mode"
 }
 
