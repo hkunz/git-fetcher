@@ -49,17 +49,30 @@ fetch_latest_github() {
         decho "Latest sorted tag: '$tag'"
     fi
 
-    if [ -n "$tag" ]; then
-        TAG="$tag"
-        ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/tags/$tag.tar.gz"
-        vecho "Constructed archive URL: $ARCHIVE_URL"
+    TAG="$tag"
+    urls=()
+
+    if [[ -n "$tag" ]]; then
+        # Try GitHub release asset first
+        release_url=$(curl -s "$api/releases/tags/$tag" | jq -r '.assets[0].browser_download_url // empty')
+        [[ -n "$release_url" ]] && urls+=("$release_url")
+
+        # Fallback to tag archive
+        urls+=("https://github.com/$owner_repo/archive/refs/tags/$tag.tar.gz")
     else
-        decho "No tags found, fetching default branch..."
-        BRANCH=$(curl -s "$api" | jq -r '.default_branch')
-        ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/heads/$BRANCH.tar.gz"
-        TAG=""
-        vecho "Constructed archive URL for branch: $ARCHIVE_URL"
+        wecho "Warning: no releases or tags found for $owner_repo — falling back to default branch"
+        branch=$(curl -s "$api" | jq -r '.default_branch // "main"')
+        urls+=("https://github.com/$owner_repo/archive/refs/heads/$branch.tar.gz")
     fi
+
+    # Pick the first URL that actually exists
+    for u in "${urls[@]}"; do
+        if [[ -n "$u" ]] && curl --head --silent --fail "$u" >/dev/null; then
+            ARCHIVE_URL="$u"
+            [[ "$u" == *"/heads/"* ]] && TAG="" && BRANCH="$branch"
+            break
+        fi
+    done
 
     DESCRIPTION=$(curl -s "$api" | jq -r '.description // ""')
 
