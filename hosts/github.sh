@@ -25,8 +25,29 @@ fetch_latest_github() {
     vecho "Repository is reachable."
     decho "Fetching tags from GitHub API..."
     local tag
-    tag=$(curl -s "$api/tags" | jq -r '.[0].name // empty')
-    decho "Raw latest tag from API: '$tag'"
+
+    # ---------------------------------------
+    # 1. Try latest GitHub release
+    # ---------------------------------------
+    decho "Checking latest release..."
+    tag=$(curl -s "$api/releases/latest" | jq -r '.tag_name // empty')
+    decho "Release tag: '$tag'"
+
+    # ---------------------------------------
+    # 2. Fallback to tags
+    # ---------------------------------------
+    if [[ -z "$tag" || "$tag" == "null" ]]; then
+        decho "No releases found, checking tags..."
+
+        tag=$(
+            curl -s "$api/tags?per_page=100" \
+            | jq -r '.[].name' \
+            | grep -E '[0-9]' \
+            | sort -V \
+            | tail -n1
+        )
+        decho "Latest sorted tag: '$tag'"
+    fi
 
     if [ -n "$tag" ]; then
         TAG="$tag"
