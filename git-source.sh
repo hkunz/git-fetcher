@@ -147,11 +147,16 @@ iecho "Downloaded file: $(bold_bright_cyan "$ARCHIVE_NAME")"
 iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
 [ -n "$DESCRIPTION" ] && iecho "Package description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
 
-# Determine version
-if [ -n "$TAG" ] && [[ "$TAG" =~ ([0-9]+(\.[0-9]+)*) ]]; then
-    VERSION="${BASH_REMATCH[1]}"
+# Determine version: Extract version from tag robustly (dots, underscores, or dashes)
+if [ -n "$TAG" ]; then
+    if [[ "$TAG" =~ ([0-9]+([._-][0-9]+)+) ]]; then
+        VERSION="${BASH_REMATCH[1]}"
+        VERSION="${VERSION//[_-]/.}"  # normalize separators to dots
+    else
+        VERSION="$TAG"
+    fi
 else
-    VERSION="${TAG:-$BRANCH}"
+    VERSION="$BRANCH"
 fi
 
 iecho "Version: $(bold_bright_cyan "$VERSION")"
