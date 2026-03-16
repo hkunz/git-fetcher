@@ -13,54 +13,54 @@ detect_host() {
     return 1  # not a Googlesource URL
 }
 
-fetch_latest_googlesource() {
+resolve_archive() {
     local repo_url="$1"
-    repo_url="${repo_url%/}"   # strip trailing slash
+    repo_url="${repo_url%/}"  # strip trailing slash
 
     vecho "Fetching tags from GoogleSource repository: $repo_url"
 
-    # --- Get all tags ---
-    local raw_tags
+    # Fetch all tags
+    local raw_tags tags
     raw_tags=$(git ls-remote --tags "$repo_url" 2>/dev/null | awk '{print $2}')
     decho "Raw tags from ls-remote:"
     decho "$raw_tags"
 
-    # --- Determine latest tag ---
-    local tag
-    tag=$(echo "$raw_tags" \
-        | grep -v '{}' \
-        | sed 's#refs/tags/##' \
-        | sort -V \
-        | tail -n1)
+    # Strip annotated tags and remove 'refs/tags/' prefix
+    tags=$(echo "$raw_tags" | grep -v '{}' | sed 's#refs/tags/##')
+    decho "Filtered tags:"
+    decho "$tags"
 
-    if [ -n "$tag" ]; then
-        TAG="$tag"
-        BRANCH=""
-        VERSION="$TAG"
-        iecho "Using latest tag: $TAG"
-    else
+    # Determine latest tag or default branch
+    local default_branch
+    default_branch=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null \
+        | awk '/ref:/ {print $2}' \
+        | sed 's#refs/heads/##')
+    decho "Default branch: $default_branch"
+
+    VERSION=$(get_latest_tag_or_branch "$tags" "$default_branch")
+    if [[ "$VERSION" == "$default_branch" ]]; then
         TAG=""
-        BRANCH=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null \
-            | awk '/ref:/ {print $2}' \
-            | sed 's#refs/heads/##')
-        VERSION="$BRANCH"
-        iecho "No tags found. Using default branch: $BRANCH"
+        BRANCH="$default_branch"
+        iecho "No tags found — using default branch: $BRANCH"
+    else
+        TAG="$VERSION"
+        BRANCH=""
+        iecho "Using latest tag: $TAG"
     fi
 
-    # --- Construct archive info ---
-    local base
-    base="$(basename "$repo_url")"
-    ARCHIVE_URL="$repo_url/+archive/$VERSION.tar.gz"
-    ARCHIVE_FILE="$base-$VERSION.tar.gz"
-    decho "ARCHIVE_URL: $ARCHIVE_URL"
-    decho "ARCHIVE_FILE: $ARCHIVE_FILE"
+    ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo_url" "$VERSION")
+    set_archive_info "$repo_url" "$VERSION"
 
-    # GoogleSource doesn’t provide a description via HTTP API. You’d need to extract info from the README.md in the repo if you want a description.
-    DESCRIPTION="No description available"  
+    DESCRIPTION="GoogleSource doesn’t provide a description via HTTP API"
 
-    # --- Warning about dynamic tarballs ---
     iecho
     iecho "Note: Googlesource generates tarballs dynamically."
     iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
     iecho
+
+    decho "TAG          = '$TAG'"
+    decho "BRANCH       = '$BRANCH'"
+    decho "ARCHIVE_URL  = '$ARCHIVE_URL'"
+    decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
+    decho "DESCRIPTION  = '$DESCRIPTION'"
 }

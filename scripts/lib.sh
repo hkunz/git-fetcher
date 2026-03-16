@@ -60,7 +60,6 @@ download_archive() {
     headers=($(curl_headers "$url"))
     curl -L "${headers[@]}" "$url" -o "$file"
 
-   # detect archive type
     local filetype
     filetype=$(file -b "$file")
 

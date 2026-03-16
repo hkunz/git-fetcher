@@ -4,6 +4,7 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 SCRIPT_DIR="$ROOT_DIR/scripts"
 
+source "$ROOT_DIR/hosts/common.sh"
 source "$SCRIPT_DIR/lib.sh"
 source "$SCRIPT_DIR/lib-db.sh"
 source "$SCRIPT_DIR/lib-color.sh"
@@ -13,6 +14,7 @@ VERBOSE=false
 DEBUG=false
 GENERATE_MXE=false
 FORCE_DOWNLOAD=false
+GH_MODE="tags"
 INPUT=""
 
 # =============================================
@@ -25,6 +27,7 @@ print_usage() {
     echo "  -b, --list-branches          List all branches of the repository"
     echo "  -v, --verbose                Enable verbose output"
     echo "  --debug                      Enable debug output"
+    echo "  --ref=<name>                 Download a specific branch, tag, or commit"
     echo "  --generate-mxe-makefile      Generate MXE .mk file after download"
     echo "  --force                      Redownload archive even if it exists"
     echo "  -h, --help                   Show this help message"
@@ -46,6 +49,17 @@ while [[ $# -gt 0 ]]; do
             GENERATE_MXE=true
             MXE_ARGS="default"
             ;;
+        --ref=*)
+            REF_NAME="${1#*=}"
+            ;;
+        --ref)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                eecho "Error: --ref requires a branch, tag, or commit"
+                exit 1
+            fi
+            REF_NAME="$2"
+            shift
+            ;;
         --force) FORCE_DOWNLOAD=true ;;
         -h|--help) print_usage; exit 0 ;;
         -*) eecho "Unknown option: $1"; exit 1 ;;
@@ -59,17 +73,29 @@ done
 # =============================================
 # Host detection
 # =============================================
+
 HOST=""
 OWNER_REPO=""
 GIT_URL=""
-for module in "$ROOT_DIR"/hosts/*.sh; do
-    source "$module"
-    if declare -f detect_host >/dev/null && detect_host "$INPUT"; then
+
+for domain in $(get_known_domains); do
+    vecho "Checking if URL '$INPUT' contains domain: '$domain'"
+    if [[ "$INPUT" == *"$domain"* ]]; then
+        HOST="${domain%%.*}"  # strip .com/.org/etc
+        vecho "Detected host: $HOST"
         break
     fi
 done
 
-[ -n "$HOST" ] || { eecho "Unsupported host in URL '$INPUT'"; exit 1; }
+HOST_SCRIPT="$ROOT_DIR/hosts/$HOST.sh"
+
+if [[ -n "$HOST" && -f "$HOST_SCRIPT" ]]; then
+    source "$HOST_SCRIPT"
+    detect_host "$INPUT"
+else
+    eecho "Unsupported host in URL '$INPUT'"
+    exit 1
+fi
 
 vecho "Detected host: $HOST"
 vecho "Repository (owner/name): $OWNER_REPO"
@@ -104,11 +130,6 @@ load_from_db() {
 }
 
 download_archive_if_needed() {
-    GH_MODE="tags"
-    FETCH_FUNC="fetch_latest_$HOST"
-    [ "$(declare -f $FETCH_FUNC)" ] || { eecho "Fetch function '$FETCH_FUNC' not found!"; exit 1; }
-
-    "$FETCH_FUNC" "$OWNER_REPO"  # sets TAG and BRANCH
 
     ARCHIVE_VERSION="${TAG:-$BRANCH}"
     ARCHIVE_NAME="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
@@ -130,6 +151,7 @@ if [[ -n "$entry" && -f "$ARCHIVE_FILE_DB" && "$FORCE_DOWNLOAD" == false ]]; the
     iecho "Download URL: $ARCHIVE_URL"
     iecho "Using archive from DB: $ARCHIVE_FILE"
 else
+    resolve_archive $OWNER_REPO
     download_archive_if_needed
     iecho "Downloaded archive: $ARCHIVE_FILE"
 fi
