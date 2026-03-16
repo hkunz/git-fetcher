@@ -51,21 +51,27 @@ fetch_latest_github() {
 
     TAG="$tag"
     urls=()
+    GH_MODE="tags"
 
     if [[ -n "$tag" ]]; then
         # Try GitHub release asset first
         release_url=$(curl -s "$api/releases/tags/$tag" | jq -r '.assets[0].browser_download_url // empty')
-        [[ -n "$release_url" ]] && urls+=("$release_url")
-
-        # Fallback to tag archive
+        if [[ -n "$release_url" ]]; then
+            # urls+=("$release_url")  # don't add because releases sometimes are or contain binaries
+            GH_MODE="releases"
+        fi
+        # Fallback to tag archive if no release asset
         urls+=("https://github.com/$owner_repo/archive/refs/tags/$tag.tar.gz")
+
     else
-        wecho "Warning: no releases or tags found for $owner_repo — falling back to default branch"
+        # No tag found, fallback to default branch
         branch=$(curl -s "$api" | jq -r '.default_branch // "main"')
         urls+=("https://github.com/$owner_repo/archive/refs/heads/$branch.tar.gz")
+        # GH_MODE="branches"  # tags also worked in MXE when the branch was master/main
+        wecho "Warning: no releases or tags found for $owner_repo — using branch '$branch'"
     fi
 
-    # Pick the first URL that actually exists
+    # Pick first valid URL
     for u in "${urls[@]}"; do
         if [[ -n "$u" ]] && curl --head --silent --fail "$u" >/dev/null; then
             ARCHIVE_URL="$u"
@@ -75,8 +81,10 @@ fetch_latest_github() {
     done
 
     DESCRIPTION=$(curl -s "$api" | jq -r '.description // ""')
+    GH_MODE="tags"  # Always use tags; even branches like master/main are handled as tags, because releases may contain binaries instead of source
 
     decho "TAG set to: $TAG"
+    decho "Using GitHub API mode: $GH_MODE"
     decho "ARCHIVE_URL set to: $ARCHIVE_URL"
     decho "DESCRIPTION  = '$DESCRIPTION'"
     decho "BRANCH       = '$BRANCH'"

@@ -109,6 +109,27 @@ url_encode() {
 }
 
 # =============================================
+# Determine GitHub mode from ARCHIVE_URL
+# Sets GH_MODE to 'releases', 'tags', 'branches', or 'unknown'
+# Arguments:
+#   $1 - URL to analyze
+# =============================================
+deduce_gh_mode() {
+    local url="$1"
+    local mode="unknown"
+
+    if [[ "$url" == *"/releases/"* ]]; then
+        mode="releases"
+    elif [[ "$url" == *"/tags/"* ]]; then
+        mode="tags"
+    elif [[ "$url" == *"/heads/"* ]]; then
+        mode="branches"
+    fi
+
+    echo "$mode"
+}
+
+# =============================================
 # General message printer with optional prefix and conditional printing
 # Arguments:
 #   $1 - variable name to check (VERBOSE, DEBUG, INFO, WARNING, or ALWAYS)

@@ -115,7 +115,9 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 # Extract the entire archive
 # =============================================
 mkdir -p "$TMP_DIR"
+echo "HERE ==? $ARCHIVE_FILE === "$TMP_DIR""
 tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR"
+echo "DONE?"
 
 TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)  # Detect top-level folder (source root)
 SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
@@ -284,6 +286,7 @@ IGNORE=""
 mkdir -p "$OUTPUT_DIR"
 
 if [[ "$GIT_URL" == *"github.com"* ]]; then
+    GH_MODE=$(deduce_gh_mode "$ARCHIVE_URL")
     DELETE_BLOCK='/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d'  # Remove non-GitHub block
 else
     DELETE_BLOCK='/# BEGIN_GITHUB/,/# END_GITHUB/d'  # Remove GitHub block
@@ -310,7 +313,6 @@ if [[ -n "$PC_FILE" && -s "$TMP_DIR/$PC_FILE" ]]; then
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
 fi
 
-GH_MODE="tags"
 TAG_PREFIX="${TAG%%[0-9]*}"
 ARCHIVE_FORMAT=""
 if [[ -n "$TAG_PREFIX" ]]; then
@@ -318,6 +320,8 @@ if [[ -n "$TAG_PREFIX" ]]; then
 fi
 
 iecho "---------------------------------------------------------------"
+
+GH_MODE="tags"  # Always use tags; even branches like master/main are handled as tags, because releases may contain binaries instead of source
 
 sed \
 ${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \

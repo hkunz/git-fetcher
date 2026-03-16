@@ -104,6 +104,7 @@ load_from_db() {
 }
 
 download_archive_if_needed() {
+    GH_MODE="tags"
     FETCH_FUNC="fetch_latest_$HOST"
     [ "$(declare -f $FETCH_FUNC)" ] || { eecho "Fetch function '$FETCH_FUNC' not found!"; exit 1; }
 
