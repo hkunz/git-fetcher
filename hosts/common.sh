@@ -2,25 +2,48 @@
 # hosts/common.sh
 # Shared helpers for GitHub, GitLab, Bitbucket, GoogleSource
 
+
+curl_header() {
+    local host="$1"
+    local -a headers=()
+    if [[ "$host" == "github" ]]; then
+        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+            wecho "GITHUB_TOKEN is not set; requests will be unauthenticated and may be rate-limited" >&2
+            return 0
+        fi
+        vecho "Making authenticated request to $host API using token; requests will avoid rate limits and have full API access" >&2
+        headers+=("-H" "Authorization: Bearer $GITHUB_TOKEN")
+        headers+=("-H" "X-GitHub-Api-Version: 2026-03-10")
+
+    elif [[ "$host" == "gitlab" ]]; then
+        if [[ -z "${GITLAB_TOKEN:-}" ]]; then
+            wecho "GITLAB_TOKEN is not set; requests may be rate-limited" >&2
+            return 0
+        fi
+        headers+=("-H" "PRIVATE-TOKEN: $GITLAB_TOKEN")
+    fi
+    vecho "No token provided; sending unauthenticated request to $host API. Rate limits may apply." >&2
+    printf '%s\n' "${headers[@]}"
+}
+
 # ==============================
 # HTTP check
 # ==============================
 check_repo_access() {
     local url="$1"
+    local owner_repo="$2"
+    vecho "Checking repository: $owner_repo (API: $url)"
+    readarray -t curl_args < <(curl_header "$HOST")
+
     local status
-    status=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+    status=$(curl -s -o /dev/null -w "%{http_code}" "${curl_args[@]}" "$url")
+
     if [[ "$status" -ne 200 ]]; then
         eecho "Cannot access $url (HTTP $status)"
         return 1
     fi
+    iecho "Repository is reachable."
     return 0
-}
-
-# Optional: fetch curl headers (for API auth or logging)
-curl_headers() {
-    local url="$1"
-    # Example: you can add -H "Authorization: token $GITHUB_TOKEN" here if needed
-    echo "-s"
 }
 
 # ==============================
@@ -75,18 +98,18 @@ detect_host_generic() {
 # ==============================
 get_latest_tag_or_branch() {
     local tags="$1"  # newline-separated list
-    local default_branch="$2"
     local tag
+
     if [[ -n "$tags" ]]; then
         tag=$(echo "$tags" \
+            | tr -d '\r' \
+            | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
             | grep -E '^[vV]?[0-9]+(\.[0-9]+)*$' \
             | sort -V \
             | tail -n1)
-
-        [[ -n "$tag" ]] && echo "$tag" && return 0
     fi
-    # fallback
-    echo "$default_branch"
+
+    echo "$tag"
 }
 
 # ==============================
@@ -109,7 +132,7 @@ construct_archive_url() {
             echo "https://bitbucket.org/$owner_repo/get/$version.tar.gz"
             ;;
         googlesource)
-            echo "$owner_repo/+archive/$version.tar.gz"
+            echo "https://$owner_repo/+archive/$version.tar.gz"
             ;;
         *)
             eecho "Unknown host: $host"
@@ -123,9 +146,19 @@ construct_archive_url() {
 # ==============================
 set_archive_info() {
     local repo="$1"
-    local version="$2"
-    ARCHIVE_FILE="$(basename "$repo")-${version}.tar.gz"
-    DESCRIPTION="${DESCRIPTION:-No description available}"
+    local ref="$2"
+    local api="$3"
+
+    decho "Final ref chosen: '$ref' (TAG='$TAG', BRANCH='$BRANCH')"
+    if [[ -n "$TAG" ]]; then
+        ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$TAG" "tags")
+    else
+        ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$BRANCH" "heads")
+    fi
+    readarray -t curl_args < <(curl_header "$HOST")
+    ARCHIVE_FILE="$(basename "$repo")-${ref}.tar.gz"
+    DESCRIPTION=$(curl -s "${curl_args[@]}" "$api" | jq -r '.description // empty')
+    DESCRIPTION="${DESCRIPTION:-Custom ref ${safe_ref} (no upstream description)}"
 }
 
 # ==============================
@@ -133,15 +166,44 @@ set_archive_info() {
 # ==============================
 check_commit_exists() {
     local url="$1"
-    local headers
-    headers=($(curl_headers "$url"))
+    readarray -t curl_args < <(curl_header "$HOST")
+    local code=$(curl -s -o /dev/null -w "%{http_code}" "${curl_args[@]}" -L -I "$url")
+    [[ "$code" =~ ^2 ]] && return 0 || return 1
+}
 
-    local code
-    code=$(curl -s -o /dev/null -w "%{http_code}" "${headers[@]}" -L -I "$url")
+# ==============================
+# Encode a repository path for use in an HTTP API URL
+# ==============================
+encode_repo_path_for_api() {
+    local repo_path="$1"
+    decho "Encoding repository path for API: $repo_path" >&2
+    local encoded
+    encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$repo_path''', safe=''))")
+    decho "Encoded repository path: $encoded" >&2
+    echo "$encoded"
+}
 
-    if [[ "$code" =~ ^2 ]]; then
-        return 0  # commit exists
+# Decide whether to use the latest tag or fallback branch
+resolve_latest_tag_or_branch() {
+    local proposed_latest="$1"
+    local default_branch="$2"
+    vecho "Proposed latest tag: '$proposed_latest'"
+
+    if [[ -n "$proposed_latest" ]]; then
+        TAG="$proposed_latest"
+        BRANCH=""
+        iecho "Using latest tag '$TAG' for archive download"
     else
-        return 1  # commit does not exist
+        TAG=""
+        BRANCH="$default_branch"
+        wecho "No tags found; falling back to default branch '$BRANCH' for archive download"
     fi
+}
+
+summarize_archive() {
+    decho "TAG          = '${TAG}'"
+    decho "BRANCH       = '${BRANCH}'"
+    decho "ARCHIVE_URL  = '${ARCHIVE_URL}'"
+    decho "ARCHIVE_FILE = '${ARCHIVE_FILE}'"
+    decho "DESCRIPTION  = '${DESCRIPTION}'"
 }

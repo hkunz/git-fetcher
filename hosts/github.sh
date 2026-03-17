@@ -11,53 +11,19 @@ detect_host() {
 resolve_archive() {
     local owner_repo="$1"
     local api="https://api.github.com/repos/$owner_repo"
+    check_repo_access "$api" "$owner_repo" || return 1
 
-    vecho "Checking repository: $owner_repo"
-    check_repo_access "$api" || return 1
-    iecho "Repository is reachable."
+    readarray -t curl_args < <(curl_header "$HOST")
+    local raw_tags=$(curl -s "${curl_args[@]}" "$api/tags?per_page=100" | jq -r '.[].name // empty')
+    local filtered_tags=$(echo "$raw_tags" | grep -v -E '^(main|master)$')
+    local default_branch=$(curl -s "${curl_args[@]}" "$api" | jq -r '.default_branch // "main"')
+    local proposed_latest=$(get_latest_tag_or_branch "$filtered_tags" "$default_branch" | tr -d '\r\n')
 
-    # Try latest release first
-    local tag
-    # We skip GitHub releases to avoid downloading possible binaries; only tags are used
-    # tag=$(curl -s "$(curl_headers "$api")" "$api/releases/latest" | jq -r '.tag_name // empty')
-    # decho "Release tag: '$tag'"
+    resolve_latest_tag_or_branch "$proposed_latest" "$default_branch"
+    final_ref="${TAG:-$BRANCH}"
 
-    # Fallback to latest tag
-    if [[ -z "$tag" || "$tag" == "null" ]]; then
-        vecho "Checking tags..."  # vecho "No releases found, checking tags..."
-        local tags
-        tags=$(curl -s "$(curl_headers "$api")" "$api/tags?per_page=100" | jq -r '.[].name')
-        if [[ -n "$tags" ]]; then
-            tag=$(get_latest_tag_or_branch "$tags" "main")
-            decho "Latest tag (sorted) = '$tag'"
-        else
-            vecho "No tags found, falling back to default branch"
-            tag=""
-        fi
-    fi
-
-    # Determine branch or tag
-    local branch=""
-    if [[ -z "$tag" ]]; then
-        branch=$(curl -s "$api" | jq -r '.default_branch // "main"')
-        ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/heads/$branch.tar.gz"
-        TAG=""
-        BRANCH="$branch"
-    else
-        ARCHIVE_URL="https://github.com/$owner_repo/archive/refs/tags/$tag.tar.gz"
-        TAG="$tag"
-        BRANCH=""
-    fi
-
-    set_archive_info "$owner_repo" "${TAG:-$BRANCH}"
-
-    DESCRIPTION=$(curl -s "$(curl_headers "$api")" "$api" | jq -r '.description // ""')
-
-    decho "TAG          = '$TAG'"
-    decho "BRANCH       = '$BRANCH'"
-    decho "ARCHIVE_URL  = '$ARCHIVE_URL'"
-    decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
-    decho "DESCRIPTION  = '$DESCRIPTION'"
+    set_archive_info "$owner_repo" "$final_ref" "$api"
+    summarize_archive
 }
 
 resolve_specific_ref() {
@@ -90,7 +56,7 @@ resolve_specific_ref() {
     if [[ "$ref_name" =~ ^[0-9a-f]{7,40}$ ]]; then
         commit_url="https://github.com/$owner_repo/commit/$ref_name"
         if ! check_commit_exists "$commit_url"; then
-            eecho "Error: commit '$ref_name' does not exist in $owner_repo"
+            eecho "The commit '$ref_name' does not exist in $owner_repo"
             return 1
         fi
         TAG=""
@@ -99,6 +65,6 @@ resolve_specific_ref() {
         ARCHIVE_URL="https://github.com/$owner_repo/archive/$ref_name.tar.gz"
         return 0
     fi
-    eecho "Error: ref '$ref_name' not found in $owner_repo"
+    eecho "The ref '$ref_name' not found in $owner_repo"
     return 1
 }

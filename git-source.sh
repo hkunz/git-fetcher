@@ -182,7 +182,7 @@ should_redownload() {
 # Download archive if needed
 # =============================================
 download_archive_if_needed() {
-    ARCHIVE_VERSION="${TAG:-$BRANCH:-$REF_NAME}"
+    ARCHIVE_VERSION="${TAG:-${BRANCH:-${REF_NAME}}}"
     ARCHIVE_NAME="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_NAME"
     PACKAGE_NAME="$(basename "$OWNER_REPO")"
@@ -194,7 +194,6 @@ download_archive_if_needed() {
     BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
 
     if [[ -n "$REF_NAME" ]]; then
-        # custom ref → both TAG and BRANCH empty
         update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
     else
         update_db "$GIT_URL" "$TAG" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
@@ -224,7 +223,7 @@ fi
 if [[ -n "$TAG" ]]; then
     iecho "Latest Tag: $(bold_bright_green "$TAG")"
 elif [[ -n "$BRANCH" ]]; then
-    iecho "Default Branch: $(bold_bright_green "$BRANCH") (No tag found)"
+    iecho "Default Branch: $(bold_bright_green "$BRANCH")"
 elif [[ -n "$REF_NAME" ]]; then
     iecho "Commit/Custom Ref: $(bold_bright_green "$REF_NAME")"
 fi

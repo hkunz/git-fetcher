@@ -166,7 +166,7 @@ extract_cmake_dependencies() {
     local files=("$@")
     local dep_list=()
     num_files=${#files[@]}
-    iecho "[INFO] Parsing $num_files CMake files for dependencies..."
+    iecho "Parsing $num_files CMake files for dependencies..."
 
     for file in "${files[@]}"; do
         [[ -z "$file" || ! -f "$file" ]] && continue

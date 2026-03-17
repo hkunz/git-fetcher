@@ -9,48 +9,22 @@ detect_host() {
 }
 
 resolve_archive() {
-    local owner_repo="$1"
-
-    vecho "Encoding repo path for API: $owner_repo"
-    local encoded_repo
+    local owner_repo="$1"; local encoded=$(encode_repo_path_for_api "$owner_repo")
     encoded_repo=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$owner_repo''', safe=''))")
-    decho "Encoded repo: $encoded_repo"
+    local api="https://gitlab.com/api/v4/projects/$encoded"
+    check_repo_access "$api" "$owner_repo" || return 1
 
-    local api="https://gitlab.com/api/v4/projects/$encoded_repo"
+    readarray -t curl_args < <(curl_header "$HOST")
+    local raw_tags=$(curl -s "${curl_args[@]}" "$api/repository/tags?per_page=100" | jq -r '.[].name // empty')
+    local filtered_tags=$(echo "$raw_tags" | grep -v -E '^(main|master)$')
+    local default_branch=$(curl -s "${curl_args[@]}" "$api" | jq -r '.default_branch // "main"')
+    local proposed_latest=$(get_latest_tag_or_branch "$filtered_tags" "$default_branch" | tr -d '\r\n')
 
-    check_repo_access "$api" || return 1
-    iecho "Repository is reachable."
+    resolve_latest_tag_or_branch "$proposed_latest" "$default_branch"
+    final_ref="${TAG:-$BRANCH}"
 
-    # Fetch tags
-    local tags_json tags
-    tags_json=$(curl -s "$(curl_headers "$api")" "$api/repository/tags?per_page=100")
-    tags=$(echo "$tags_json" | jq -r '.[].name')
-    decho "Raw tags: $tags"
-
-    # Determine latest tag or fallback
-    local tag
-    tag=$(get_latest_tag_or_branch "$tags" "main")
-
-    if [[ -n "$tag" ]]; then
-        TAG="$tag"
-        BRANCH=""
-    else
-        TAG=""
-        BRANCH=$(curl -s "$(curl_headers "$api")" "$api" | jq -r '.default_branch // "main"')
-        wecho "Warning: no tags found — using branch '$BRANCH'"
-        tag="$BRANCH"
-    fi
-
-    ARCHIVE_URL=$(construct_archive_url "$HOST" "$owner_repo" "$tag")
-    set_archive_info "$owner_repo" "$tag"
-
-    DESCRIPTION=$(curl -s "$(curl_headers "$api")" "$api" | jq -r '.description // ""')
-
-    decho "TAG          = '$TAG'"
-    decho "BRANCH       = '$BRANCH'"
-    decho "ARCHIVE_URL  = '$ARCHIVE_URL'"
-    decho "ARCHIVE_FILE = '$ARCHIVE_FILE'"
-    decho "DESCRIPTION  = '$DESCRIPTION'"
+    set_archive_info "$owner_repo" "$final_ref" "$api"
+    summarize_archive
 }
 
 resolve_specific_ref() {
