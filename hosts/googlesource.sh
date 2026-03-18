@@ -9,45 +9,33 @@ detect_host() {
 }
 
 resolve_archive() {
-    local repo_url="$1"
-    repo_url="${repo_url%/}"
+    local repo_url="${1%/}"
+    local owner_repo="${repo_url#https://googlesource.com/}"
+    local api="https://googlesource.com/$owner_repo"
 
-    vecho "Fetching repository info from GoogleSource: $repo_url"
-    vecho "Fetching tags via git ls-remote..."
+    if git ls-remote "$repo_url" &>/dev/null; then
+        handle_http_status 200 "$repo_url"
+    else
+        handle_http_status 404 "$repo_url"
+        return 1
+    fi
 
-    local raw_tags tags
-    raw_tags=$(git ls-remote --tags "$repo_url" 2>/dev/null | awk '{print $2}')
-    decho "Raw tags:"
-    decho "$raw_tags"
+    local raw_tags=$(git ls-remote --tags "$repo_url" 2>/dev/null | awk '{print $2}')
+    local tags=$(echo "$raw_tags" | grep -v '{}' | sed 's#refs/tags/##')
+    local default_branch=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null | awk '/ref:/ {print $2}' | sed 's#refs/heads/##')
 
-    tags=$(echo "$raw_tags" | grep -v '{}' | sed 's#refs/tags/##')
-    decho "Filtered tags:"
-    decho "$tags"
-
-    local default_branch
-    default_branch=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null | awk '/ref:/ {print $2}' | sed 's#refs/heads/##')
     default_branch="${default_branch:-main}"
     decho "Default branch: $default_branch"
 
-    local proposed_latest
-    proposed_latest=$(get_latest_tag_or_branch "$tags" "$default_branch")
+    local proposed_latest=$(get_latest_tag_or_branch "$tags" "$default_branch")
+    resolve_latest_tag_or_branch "$proposed_latest" "$default_branch"
 
-    if [[ -n "$tags" && "$proposed_latest" != "$default_branch" ]]; then
-        TAG="$proposed_latest"
-        BRANCH=""
-        iecho "Using latest tag: $TAG"
-    else
-        TAG=""
-        BRANCH="$default_branch"
-        wecho "No tags found — using branch '$BRANCH'"
-    fi
-
-    local latest="${TAG:-$BRANCH}"
+    local final_ref="${TAG:-$BRANCH}"
     local repo_path="${repo_url#https://}"
     repo_path="${repo_path#http://}"
 
-    ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo_path" "$latest")
-    set_archive_info "$repo_path" "$latest" ""
+    ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo_path" "$final_ref")
+    set_archive_info "$repo_path" "$final_ref" ""
     DESCRIPTION="GoogleSource doesn’t provide a description via HTTP API"
 
     iecho

@@ -56,11 +56,17 @@ check_repo_access() {
         eecho "Unexpected response when accessing $url: $status"
         return 1
     fi
+    handle_http_status "$status" "$url" || return 1
+}
+
+handle_http_status() {
+    local status="$1"
+    local url="$2"
     case "$status" in
         200) iecho "Repository is reachable."; return 0 ;;
         429|403) eecho "Repository not reachable: rate limit exceeded or access forbidden (HTTP $status)"; return 1 ;;
         404) eecho "Repository not found (HTTP 404)"; return 1 ;;
-        *)   eecho "Cannot access $url (HTTP $status)"; return 1 ;;
+        *) eecho "Cannot access $url (HTTP $status)"; return 1 ;;
     esac
 }
 
