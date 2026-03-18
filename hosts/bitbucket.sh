@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # hosts/bitbucket.sh
-# Example: https://bitbucket.org/atlassian/amps https://bitbucket.org/atlassian/aui/
+# Example: https://bitbucket.org/bitbucketpipelines/runners-autoscaler https://bitbucket.org/bitbucketpipelines/commit-a-new-file
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
