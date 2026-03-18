@@ -10,6 +10,7 @@ source "$SCRIPT_DIR/lib-db.sh"
 source "$SCRIPT_DIR/lib-color.sh"
 
 LIST_BRANCHES=false
+LIST_TAGS=false
 VERBOSE=false
 DEBUG=false
 GENERATE_MXE=false
@@ -25,6 +26,7 @@ print_usage() {
     echo
     echo "Options:"
     echo "  -b, --list-branches          List all branches of the repository"
+    echo "  -t, --list-tags              List all tags of the repository"
     echo "  -v, --verbose                Enable verbose output"
     echo "  --debug                      Enable debug output"
     echo "  --ref=<name>                 Download a specific branch, tag, or commit"
@@ -39,6 +41,7 @@ print_usage() {
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -b|--list-branches) LIST_BRANCHES=true ;;
+        -t|--list-tags) LIST_TAGS=true ;;
         -v|--verbose) export VERBOSE=true ;;
         --debug) export DEBUG=true ;;
         --generate-mxe-makefile=*)
@@ -101,11 +104,21 @@ vecho "Repository (owner/name): $OWNER_REPO"
 vecho "Git URL: $GIT_URL"
 
 # =============================================
-# List branches if requested
+# List branches/tags if requested
 # =============================================
 if $LIST_BRANCHES; then
     iecho "Branches for $OWNER_REPO:"
     git ls-remote --heads "$GIT_URL" | awk '{print $2}' | sed 's#refs/heads/##'
+    exit 0
+fi
+
+if $LIST_TAGS; then
+    iecho "Tags for $OWNER_REPO:"
+    git ls-remote --tags "$GIT_URL" \
+        | awk '{print $2}' \
+        | sed 's#refs/tags/##' \
+        | sed 's/\^{}//' \
+        | sort -u
     exit 0
 fi
 
