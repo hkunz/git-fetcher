@@ -49,22 +49,19 @@ check_repo_access() {
     vecho "Checking repository: $owner_repo (API: $url)"
     readarray -t curl_args < <(curl_header "$HOST")
 
-    local response body status
-    response=$(curl -sSL -w "\n%{http_code}" "${curl_args[@]}" "$url")
-    body=$(echo "$response" | head -n -1)
-    status=$(echo "$response" | tail -n1)
+    local response=$(curl -sSL -w "\n%{http_code}" -I "${curl_args[@]}" "$url")
+    local status=$(echo "$response" | tail -n1)
 
     if ! [[ "$status" =~ ^[0-9]+$ ]]; then
         eecho "Unexpected response when accessing $url: $status"
         return 1
     fi
-
-    if [[ "$status" -ne 200 ]]; then
-        eecho "Cannot access $url (HTTP $status)"
-        return 1
-    fi
-    iecho "Repository is reachable."
-    return 0
+    case "$status" in
+        200) iecho "Repository is reachable."; return 0 ;;
+        429|403) eecho "Repository not reachable: rate limit exceeded or access forbidden (HTTP $status)"; return 1 ;;
+        404) eecho "Repository not found (HTTP 404)"; return 1 ;;
+        *)   eecho "Cannot access $url (HTTP $status)"; return 1 ;;
+    esac
 }
 
 # ==============================
