@@ -222,6 +222,30 @@ query_mxe_meson_options() {
 }
 
 # =============================================
+# Query Meson for all dependencies
+# =============================================
+query_mxe_meson_dependencies() {
+    local src_dir="$1"
+    local build_dir="$2"  # e.g., $TMP_BUILD_DIR
+    DEPENDENCIES=()
+
+    mkdir -p "$build_dir"
+    # Configure Meson build directory
+    meson setup "$build_dir" "$src_dir" --backend=ninja > /dev/null 2>&1 || true
+
+    if command -v meson >/dev/null 2>&1; then
+        # Query dependencies and filter out internal Meson IDs
+        mapfile -t DEPENDENCIES < <(
+            meson introspect "$build_dir" --dependencies 2>/dev/null | jq -r '.[].name' | grep -Ev '^dep[0-9]+$'
+        )
+        DEPENDENCIES=($(printf '%s\n' "${DEPENDENCIES[@]}" | sort -u))  # Deduplicate
+        decho "Detected Meson dependencies: ${DEPENDENCIES[*]}"
+    else
+        wecho "Meson not found; cannot query dependencies"
+    fi
+}
+
+# =============================================
 # Query for build options (e.g. CMake vars)
 # =============================================
 case "$BUILD_SYSTEM" in
@@ -247,7 +271,7 @@ case "$BUILD_SYSTEM" in
         TMP_BUILD_DIR="$SOURCE_ROOT/build-meson"
         decho "Meson build folder: $TMP_BUILD_DIR"
         query_mxe_meson_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
-        # TODO: get meson project dependencies
+        query_mxe_meson_dependencies "$SOURCE_ROOT" "$TMP_BUILD_DIR"
         DEPENDENCIES=("meson-wrapper" "${DEPENDENCIES[@]}")
         ;;
     *)
