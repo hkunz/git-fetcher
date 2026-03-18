@@ -82,7 +82,6 @@ for domain in $(get_known_domains); do
     vecho "Checking if URL '$INPUT' contains domain: '$domain'"
     if [[ "$INPUT" == *"$domain"* ]]; then
         HOST="${domain%%.*}"  # strip .com/.org/etc
-        vecho "Detected host: $HOST"
         break
     fi
 done
@@ -233,8 +232,7 @@ fi
 # =============================================
 iecho "Downloaded file: $(bold_bright_cyan "$ARCHIVE_NAME")"
 iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
-
-[ -n "$DESCRIPTION" ] && iecho "Package description: $(if [ "$DEBUG" = true ]; then echo "$DESCRIPTION"; else echo "${DESCRIPTION:0:40}..."; fi)"
+[ -n "$DESCRIPTION" ] && iecho "Package description: $([[ "$DEBUG" = true ]] && echo "$DESCRIPTION" || echo "${DESCRIPTION:0:40}...")"
 
 # Determine version: Extract version from tag robustly (dots, underscores, or dashes)
 if [[ -n "$TAG" ]]; then

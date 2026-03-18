@@ -2,27 +2,41 @@
 # hosts/common.sh
 # Shared helpers for GitHub, GitLab, Bitbucket, GoogleSource
 
-
 curl_header() {
     local host="$1"
     local -a headers=()
-    if [[ "$host" == "github" ]]; then
-        if [[ -z "${GITHUB_TOKEN:-}" ]]; then
-            wecho "GITHUB_TOKEN is not set; requests will be unauthenticated and may be rate-limited" >&2
-            return 0
-        fi
-        vecho "Making authenticated request to $host API using token; requests will avoid rate limits and have full API access" >&2
-        headers+=("-H" "Authorization: Bearer $GITHUB_TOKEN")
-        headers+=("-H" "X-GitHub-Api-Version: 2026-03-10")
 
-    elif [[ "$host" == "gitlab" ]]; then
-        if [[ -z "${GITLAB_TOKEN:-}" ]]; then
-            wecho "GITLAB_TOKEN is not set; requests may be rate-limited" >&2
-            return 0
-        fi
-        headers+=("-H" "PRIVATE-TOKEN: $GITLAB_TOKEN")
+    case "$host" in
+        github)
+            if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+                vecho "Making authenticated request to GitHub API" >&2
+                headers+=("-H" "Authorization: Bearer $GITHUB_TOKEN")
+                headers+=("-H" "X-GitHub-Api-Version: 2026-03-10")
+            else
+                vecho "GITHUB_TOKEN not set; requests unauthenticated" >&2
+            fi
+            ;;
+        gitlab)
+            if [[ -n "${GITLAB_TOKEN:-}" ]]; then
+                headers+=("-H" "PRIVATE-TOKEN: $GITLAB_TOKEN")
+            else
+                vecho "GITLAB_TOKEN not set; requests unauthenticated" >&2
+            fi
+            ;;
+        bitbucket|googlesource)
+            # Tokens rarely needed, do nothing
+            ;;
+        *)
+            eecho "Unknown host: $host"
+            return 1
+            ;;
+    esac
+
+    if [[ "${#headers[@]}" -eq 0 ]]; then
+        vecho "No token provided; sending unauthenticated request to $host API. Rate limits may apply." >&2
+        return 0
     fi
-    vecho "No token provided; sending unauthenticated request to $host API. Rate limits may apply." >&2
+
     printf '%s\n' "${headers[@]}"
 }
 
@@ -35,8 +49,15 @@ check_repo_access() {
     vecho "Checking repository: $owner_repo (API: $url)"
     readarray -t curl_args < <(curl_header "$HOST")
 
-    local status
-    status=$(curl -s -o /dev/null -w "%{http_code}" "${curl_args[@]}" "$url")
+    local response body status
+    response=$(curl -sSL -w "\n%{http_code}" "${curl_args[@]}" "$url")
+    body=$(echo "$response" | head -n -1)
+    status=$(echo "$response" | tail -n1)
+
+    if ! [[ "$status" =~ ^[0-9]+$ ]]; then
+        eecho "Unexpected response when accessing $url: $status"
+        return 1
+    fi
 
     if [[ "$status" -ne 200 ]]; then
         eecho "Cannot access $url (HTTP $status)"
@@ -177,8 +198,7 @@ check_commit_exists() {
 encode_repo_path_for_api() {
     local repo_path="$1"
     decho "Encoding repository path for API: $repo_path" >&2
-    local encoded
-    encoded=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$repo_path''', safe=''))")
+    local encoded=$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$repo_path")
     decho "Encoded repository path: $encoded" >&2
     echo "$encoded"
 }

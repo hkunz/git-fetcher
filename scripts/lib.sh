@@ -80,7 +80,7 @@ download_archive() {
     if [[ "$ext" == "gz" && "$detected" != "gzip" ]]; then
         wecho "Notice: file extension suggests gzip but actual archive format is: $filetype"
     else
-        iecho "File extension '$ext' matches ($filetype)"
+        vecho "File extension '$ext' matches ($filetype)"
     fi
 
     # check if flat tarball

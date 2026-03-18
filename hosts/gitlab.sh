@@ -9,8 +9,8 @@ detect_host() {
 }
 
 resolve_archive() {
-    local owner_repo="$1"; local encoded=$(encode_repo_path_for_api "$owner_repo")
-    encoded_repo=$(python3 -c "import urllib.parse; print(urllib.parse.quote('''$owner_repo''', safe=''))")
+    local owner_repo="$1"
+    local encoded=$(encode_repo_path_for_api "$owner_repo")
     local api="https://gitlab.com/api/v4/projects/$encoded"
     check_repo_access "$api" "$owner_repo" || return 1
 
