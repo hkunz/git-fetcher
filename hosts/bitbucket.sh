@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # hosts/bitbucket.sh
-# Example: https://bitbucket.org/bitbucketpipelines/runners-autoscaler https://bitbucket.org/bitbucketpipelines/commit-a-new-file
+# Example: https://bitbucket.org/bitbucketpipelines/runners-autoscaler https://bitbucket.org/bitbucketpipelines/commit-a-new-file https://bitbucket.org/bitbucketpipelines/scala-sbt/
 
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
@@ -37,4 +37,10 @@ resolve_archive() {
 
 resolve_specific_ref() {
     resolve_specific_ref_generic bitbucket "$1" "$2" "https://bitbucket.org/%s/get/%s.tar.gz"
+}
+
+get_latest_release_tag() {
+    # Bitbucket does not have a "latest release" concept like GitHub or GitLab.
+    # Repositories only have tags, so you should use get_latest_tag_or_branch()
+    # to pick the most recent tag if needed.
 }

@@ -13,6 +13,17 @@ https://gitlab.com/gitlab-org/gitlab-runner - Gitlab
 https://github.com/webmproject/sjpeg - CMake (main branch only) commit f8a007460e4af6a865dca3974f6ef4ba8ad4567b
 
 
+Test:
+https://github.com/libxmlplusplus/libxmlplusplus - tag 5.6.0 - version 5.6.0
+https://github.com/alembic/alembic - tag 1.8.10 - version 1.8.10
+https://github.com/webmproject/sjpeg - no tags - main
+https://github.com/Netflix/vmaf - v3.0.0 - version 3.0.0
+https://gitlab.com/gitlab-org/gitlab-runner - tag v18.9.0 - version 18.9.0
+https://bitbucket.org/bitbucketpipelines/scala-sbt - tag scala-2.11.7-sbt-0.13.8 - version 2.11.7
+https://bitbucket.org/bitbucketpipelines/commit-a-new-file - no tags - master
+https://aomedia.googlesource.com/aom - tag v3.13.1 - version 3.13.1
+
 sudo apt install 
 dot -Tpng deps.dot -o deps.png
 cmake --graphviz=deps.dot .
+

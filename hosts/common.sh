@@ -125,14 +125,24 @@ get_latest_tag_or_branch() {
     local tag
 
     if [[ -n "$tags" ]]; then
-        tag=$(echo "$tags" \
+        clean_tags=$(echo "$tags" \
             | tr -d '\r' \
-            | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
-            | grep -E '[a-zA-Z0-9._-]*[0-9]+([._-][0-9]+)*[a-zA-Z0-9._-]*' \
+            | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+        # 1. Semver: optionally prefixed with "v" or "V"
+        tag=$(echo "$clean_tags" \
+            | grep -E '^v?[0-9]+\.[0-9]+(\.[0-9]+)?$' \
             | sort -V \
             | tail -n1)
-    fi
 
+        # 2. Fallback: numbers anywhere in the tag
+        if [[ -z "$tag" ]]; then
+            tag=$(echo "$clean_tags" \
+                | grep -E '[0-9]+' \
+                | sort -V \
+                | tail -n1)
+        fi
+    fi
     echo "$tag"
 }
 

@@ -53,6 +53,12 @@ resolve_specific_ref() {
     resolve_specific_ref_generic googlesource "$owner_repo" "$ref_name" "https://%s/+archive/%s.tar.gz"
 }
 
+get_latest_release_tag() {
+    # GoogleSource repositories do not have a "latest release" concept like GitHub or GitLab.
+    # Only tags and branches exist, so use get_latest_tag_or_branch()
+    # to select the most appropriate tag.
+}
+
 detect_host_googlesource() {
     local url="$1"
     if [[ "$url" =~ googlesource\.com/ ]]; then
