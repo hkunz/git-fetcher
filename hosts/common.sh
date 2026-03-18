@@ -271,10 +271,11 @@ detect_ref_type() {
         return 0
     fi
     if [[ "$ref" =~ ^[0-9a-f]{7,40}$ ]]; then
-        echo "commit"
-        return 0
+        if git ls-remote "$git_url" | grep -q "$ref"; then
+            echo "commit"
+            return 0
+        fi
     fi
-
     return 1
 }
 
