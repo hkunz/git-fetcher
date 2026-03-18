@@ -231,15 +231,29 @@ detect_ref_type() {
 
     case "$host" in
         github)
-            git_url="https://github.com/$owner_repo.git"
+            if [[ "$owner_repo" =~ ^https?:// ]]; then
+                git_url="$owner_repo.git"
+            else
+                git_url="https://github.com/$owner_repo.git"
+            fi
             ;;
         gitlab)
-            git_url="https://gitlab.com/$owner_repo.git"
+            if [[ "$owner_repo" =~ ^https?:// ]]; then
+                git_url="$owner_repo.git"
+            else
+                git_url="https://gitlab.com/$owner_repo.git"
+            fi
             ;;
         bitbucket)
-            git_url="https://bitbucket.org/$owner_repo.git"
+            if [[ "$owner_repo" =~ ^https?:// ]]; then
+                git_url="$owner_repo.git"
+            else
+                git_url="https://bitbucket.org/$owner_repo.git"
+            fi
             ;;
         googlesource)
+            # Strip https:// if present
+            owner_repo="${owner_repo#https://}"
             git_url="https://$owner_repo.git"
             ;;
         *)
@@ -260,6 +274,7 @@ detect_ref_type() {
         echo "commit"
         return 0
     fi
+
     return 1
 }
 

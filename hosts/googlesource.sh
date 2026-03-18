@@ -47,7 +47,10 @@ resolve_archive() {
 }
 
 resolve_specific_ref() {
-    resolve_specific_ref_generic googlesource "$1" "$2" "https://%s/+archive/%s.tar.gz"
+    local owner_repo="$1"
+    local ref_name="$2"
+    owner_repo="${owner_repo#https://}"  # Remove https:// if the user passed a full URL
+    resolve_specific_ref_generic googlesource "$owner_repo" "$ref_name" "https://%s/+archive/%s.tar.gz"
 }
 
 detect_host_googlesource() {
