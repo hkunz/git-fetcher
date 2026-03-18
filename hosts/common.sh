@@ -128,7 +128,7 @@ get_latest_tag_or_branch() {
         tag=$(echo "$tags" \
             | tr -d '\r' \
             | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
-            | grep -E '^[vV]?[0-9]+(\.[0-9]+)*$' \
+            | grep -E '[a-zA-Z0-9._-]*[0-9]+([._-][0-9]+)*[a-zA-Z0-9._-]*' \
             | sort -V \
             | tail -n1)
     fi
