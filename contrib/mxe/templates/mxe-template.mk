@@ -37,11 +37,8 @@ ${BUILD_OPTIONS_MULTILINE}
 # BEGIN_MESON
 	# configure package with meson
 	'$(MXE_MESON_WRAPPER)' $(MXE_MESON_OPTS) \
-		-Dprefix=/usr/local \
-		-Dlibdir=lib \
-		-Dbindir=bin \
 ${BUILD_OPTIONS_MULTILINE}
-		'$(BUILD_DIR)' '$(SOURCE_DIR)/$(PKG)'
+		'$(BUILD_DIR)' '$(SOURCE_DIR)${PKG_SUBFOLDER}'
 
 	# build meson package and install
 	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j '$(JOBS)'

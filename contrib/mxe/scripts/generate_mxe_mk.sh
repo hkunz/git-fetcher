@@ -230,19 +230,58 @@ query_mxe_meson_dependencies() {
     DEPENDENCIES=()
 
     mkdir -p "$build_dir"
-    # Configure Meson build directory
+
+    # Configure Meson build directory (no install, silent)
     meson setup "$build_dir" "$src_dir" --backend=ninja > /dev/null 2>&1 || true
 
     if command -v meson >/dev/null 2>&1; then
-        # Query dependencies and filter out internal Meson IDs
-        mapfile -t DEPENDENCIES < <(
-            meson introspect "$build_dir" --dependencies 2>/dev/null | jq -r '.[].name' | grep -Ev '^dep[0-9]+$'
-        )
-        DEPENDENCIES=($(printf '%s\n' "${DEPENDENCIES[@]}" | sort -u))  # Deduplicate
+        # Query dependencies
+        local deps_json
+        deps_json=$(meson introspect "$build_dir" --dependencies 2>/dev/null \
+                    | sed -n '/^\[/,$p')   # Skip any warnings before JSON
+
+        if [[ -n "$deps_json" ]]; then
+            # Parse dependency names and filter out internal depXXX
+            mapfile -t DEPENDENCIES < <(
+                echo "$deps_json" | jq -r '.[].name' | grep -Ev '^dep[0-9]+$'
+            )
+            # Deduplicate
+            DEPENDENCIES=($(printf '%s\n' "${DEPENDENCIES[@]}" | sort -u))
+        fi
+
         decho "Detected Meson dependencies: ${DEPENDENCIES[*]}"
     else
         wecho "Meson not found; cannot query dependencies"
     fi
+}
+
+# =============================================
+# Meson: Determine the source subfolder inside the extracted archive containing meson.build if it's not in the source root
+# =============================================
+detect_meson_subfolder() {
+    local src_root="$1"
+    local main_file="$2"
+    decho "detect_meson_subfolder: src_root='$src_root', main_file='$main_file'"
+    # If main_file is provided, use it
+    if [[ -n "$main_file" && -f "$main_file" ]]; then
+        PKG_SUBFOLDER="$(dirname "$main_file")"
+    elif [[ -f "$src_root/meson.build" ]]; then
+        # meson.build in root → empty subfolder
+        PKG_SUBFOLDER=""
+    else
+        # Find meson.build files only 1 level deep
+        main_file=$(find "$src_root" -mindepth 1 -maxdepth 2 -type f -name "meson.build" | head -1)
+        if [[ -n "$main_file" ]]; then
+            PKG_SUBFOLDER="$(dirname "$main_file")"
+        else
+            wecho "Warning: no meson.build detected in $src_root"
+            PKG_SUBFOLDER=""
+        fi
+    fi
+    PKG_SUBFOLDER="${PKG_SUBFOLDER#$src_root}"  # Remove source root prefix
+    [[ "$PKG_SUBFOLDER" == "" || "$PKG_SUBFOLDER" == "/" ]] && PKG_SUBFOLDER=""  # Root → empty
+    [[ -n "$PKG_SUBFOLDER" && "${PKG_SUBFOLDER:0:1}" != "/" ]] && PKG_SUBFOLDER="/$PKG_SUBFOLDER"  # Ensure leading slash if non-empty
+    decho "PKG_SUBFOLDER final='$PKG_SUBFOLDER'"
 }
 
 # =============================================
@@ -270,6 +309,8 @@ case "$BUILD_SYSTEM" in
     Meson)
         TMP_BUILD_DIR="$SOURCE_ROOT/build-meson"
         decho "Meson build folder: $TMP_BUILD_DIR"
+        detect_meson_subfolder "$SOURCE_ROOT"
+        decho "Meson subfolder: '${PKG_SUBFOLDER}'"
         query_mxe_meson_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
         query_mxe_meson_dependencies "$SOURCE_ROOT" "$TMP_BUILD_DIR"
         DEPENDENCIES=("meson-wrapper" "${DEPENDENCIES[@]}")
@@ -365,6 +406,7 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${CHECKSUM}|$CHECKSUM|g" \
 -e "s|\${DEPENDENCIES}|$MXE_DEPENDENCIES|g" \
 -e "s|\${LIBS}|$PC_FILE_LIBS|g" \
+-e "s|\${PKG_SUBFOLDER}|$PKG_SUBFOLDER|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
 -e "/# BEGIN_NON_GITHUB/d" \
