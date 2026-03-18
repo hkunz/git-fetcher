@@ -223,6 +223,81 @@ resolve_latest_tag_or_branch() {
     fi
 }
 
+detect_ref_type() {
+    local host="$1"
+    local owner_repo="$2"
+    local ref="$3"
+    local git_url
+
+    case "$host" in
+        github)
+            git_url="https://github.com/$owner_repo.git"
+            ;;
+        gitlab)
+            git_url="https://gitlab.com/$owner_repo.git"
+            ;;
+        bitbucket)
+            git_url="https://bitbucket.org/$owner_repo.git"
+            ;;
+        googlesource)
+            git_url="https://$owner_repo.git"
+            ;;
+        *)
+            eecho "Unknown host: $host"
+            return 1
+            ;;
+    esac
+
+    if git ls-remote --heads "$git_url" "$ref" | grep -q "$ref"; then
+        echo "branch"
+        return 0
+    fi
+    if git ls-remote --tags "$git_url" "$ref" | grep -q "$ref"; then
+        echo "tag"
+        return 0
+    fi
+    if [[ "$ref" =~ ^[0-9a-f]{7,40}$ ]]; then
+        echo "commit"
+        return 0
+    fi
+    return 1
+}
+
+resolve_specific_ref_generic() {
+    local host="$1"
+    local owner_repo="$2"
+    local ref_name="$3"
+    local commit_url_template="$4"  # optional
+
+    DESCRIPTION="Custom ref ${ref_name:0:7} (no upstream description)"
+    vecho "Resolving specific ref: $ref_name"
+
+    local ref_type
+    ref_type=$(detect_ref_type "$host" "$owner_repo" "$ref_name") || {
+        eecho "The ref '$ref_name' not found in $owner_repo"
+        return 1
+    }
+
+    case "$ref_type" in
+        branch)
+            BRANCH="$ref_name"; TAG=""; REF_NAME=""
+            ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$BRANCH" "heads")
+            ;;
+        tag)
+            TAG="$ref_name"; BRANCH=""; REF_NAME=""
+            ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$TAG" "tags")
+            ;;
+        commit)
+            TAG=""; BRANCH=""; REF_NAME="$ref_name"
+            if [[ -n "$commit_url_template" ]]; then
+                ARCHIVE_URL=$(printf "$commit_url_template" "$owner_repo" "$REF_NAME")
+            else
+                ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$REF_NAME")
+            fi
+            ;;
+    esac
+}
+
 summarize_archive() {
     decho "TAG          = '${TAG}'"
     decho "BRANCH       = '${BRANCH}'"

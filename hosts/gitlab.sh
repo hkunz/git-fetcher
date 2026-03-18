@@ -28,9 +28,5 @@ resolve_archive() {
 }
 
 resolve_specific_ref() {
-    local owner_repo="$1"
-    local ref_name="$2"
-
-    eecho "Error: --ref is only supported for GitHub at the moment (host='$HOST')"
-    return 1
+    resolve_specific_ref_generic gitlab "$1" "$2" "https://gitlab.com/%s/-/archive/%s/$(basename "$1")-%s.tar.gz"
 }

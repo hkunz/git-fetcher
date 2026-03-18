@@ -47,11 +47,7 @@ resolve_archive() {
 }
 
 resolve_specific_ref() {
-    local owner_repo="$1"
-    local ref_name="$2"
-
-    eecho "Error: --ref is only supported for GitHub at the moment (host='$HOST')"
-    return 1
+    resolve_specific_ref_generic googlesource "$1" "$2" "https://%s/+archive/%s.tar.gz"
 }
 
 detect_host_googlesource() {
