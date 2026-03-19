@@ -43,4 +43,5 @@ get_latest_release_tag() {
     # Bitbucket does not have a "latest release" concept like GitHub or GitLab.
     # Repositories only have tags, so you should use get_latest_tag_or_branch()
     # to pick the most recent tag if needed.
+    :
 }

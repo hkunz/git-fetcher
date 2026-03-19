@@ -57,6 +57,7 @@ get_latest_release_tag() {
     # GoogleSource repositories do not have a "latest release" concept like GitHub or GitLab.
     # Only tags and branches exist, so use get_latest_tag_or_branch()
     # to select the most appropriate tag.
+    :
 }
 
 detect_host_googlesource() {
