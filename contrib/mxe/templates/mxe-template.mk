@@ -51,18 +51,18 @@ ${BUILD_OPTIONS_MULTILINE}
 
 # BEGIN_PC_FILE
 	# Only needed if the project does not ship a .pc file
-	# $(call GENERATE_PC, \
-	#	$(PREFIX)/$(TARGET), \
-	#	$(PKG), \
-	#	$($(PKG)_DESCR), \
-	#	$($(PKG)_VERSION), \
-	#	${REQUIRES}, \
-	#	${REQUIRES_PRIVATE}, \
-	#	${LIBS}, \
-	#	${LIBS_PRIVATE}, \
-	#	${CFLAGS}, \
-	#	${CFLAGS_PRIVATE}, \
-	# )
+	$(call GENERATE_PC, \
+		$(PREFIX)/$(TARGET), \
+		$(PKG), \
+		$($(PKG)_DESCR), \
+		$($(PKG)_VERSION), \
+		${REQUIRES}, \
+		${REQUIRES_PRIVATE}, \
+		${LIBS}, \
+		${LIBS_PRIVATE}, \
+		${CFLAGS}, \
+		${CFLAGS_PRIVATE}, \
+	)
 # END_PC_FILE
 
 	# compile a test program to verify the library is usable

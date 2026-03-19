@@ -114,3 +114,73 @@ detect_meson_subfolder() {
     [[ -n "$PKG_SUBFOLDER" && "${PKG_SUBFOLDER:0:1}" != "/" ]] && PKG_SUBFOLDER="/$PKG_SUBFOLDER"  # Ensure leading slash if non-empty
     decho "PKG_SUBFOLDER final='$PKG_SUBFOLDER'"
 }
+
+# ===================================================
+# Generate values needed for GENERATE_PC
+# ===================================================
+mxe_generate_pc_file_vars() {
+    decho "Missing .pc file so Generating pkg-config variables ..."
+
+    REQUIRES=($(printf "%s " "${DEPENDENCIES[@]}" | tr ' ' '\n' | grep -v '^meson-wrapper$' | sort -u))
+    REQUIRES="${REQUIRES[*]}"
+
+    REQUIRES_PRIVATE=""  # empty unless known
+    decho "REQUIRES='$REQUIRES'"
+    decho "REQUIRES_PRIVATE='$REQUIRES_PRIVATE'"
+
+    LIBS=()
+    LIBS_PRIVATE=()
+
+    decho "Looking for tmp-$PACKAGE_NAME-* in $MXE_ROOT"
+    tmp_dir=$(find "$MXE_ROOT" -maxdepth 1 -type d -name "tmp-$PACKAGE_NAME-*" | sort -r | head -1)
+
+    if [[ -n "$tmp_dir" ]]; then
+        decho "Found MXE tmp build dir: $tmp_dir"
+        # Scan all libs inside tmp_dir recursively
+        while IFS= read -r lib; do
+            [[ -f "$lib" ]] || continue
+            libname=$(basename "$lib")
+            libname=${libname#lib}      # remove lib prefix
+            libname=${libname%%.*}      # remove extension
+
+            # Heuristic: main library is public, rest private
+            if [[ "$libname" == "vmaf" ]]; then
+                LIBS+=("-l$libname")
+            else
+                LIBS_PRIVATE+=("-l$libname")
+            fi
+            decho "Found lib: $lib -> $([[ "$libname" == "vmaf" ]] && echo "public" || echo "private")"
+        done < <(find "$tmp_dir" -type f -name "lib*.a" -o -name "lib*.so")
+    else
+        decho "No MXE tmp build dir found, fallback to $PREFIX/$TARGET/lib/"
+        shopt -s nullglob
+        for lib in "$PREFIX/$TARGET/lib/"*.a "$PREFIX/$TARGET/lib/"*.so; do
+            [[ -f "$lib" ]] || continue
+            libname=$(basename "$lib")
+            libname=${libname#lib}
+            libname=${libname%%.*}
+            LIBS+=("-l$libname")
+        done
+        shopt -u nullglob
+    fi
+
+    LIBS="${LIBS[*]}"
+    LIBS_PRIVATE="${LIBS_PRIVATE[*]}"
+    decho "LIBS=$LIBS"
+    decho "LIBS_PRIVATE=$LIBS_PRIVATE"
+
+    CFLAGS=()
+    CFLAGS_PRIVATE=()
+
+    public_include="$SOURCE_ROOT$PKG_SUBFOLDER/include"
+    if [[ -d "$public_include" ]]; then
+        CFLAGS+=("-I\$(PREFIX)/\$(TARGET)/$(basename "$public_include")")
+        decho "Public include: -I\$(PREFIX)/\$(TARGET)/$(basename "$public_include")"
+    fi
+
+    CFLAGS=("-I\$(PREFIX)/\$(TARGET)/include")
+    CFLAGS="${CFLAGS[*]}"
+    CFLAGS_PRIVATE="${CFLAGS_PRIVATE[*]}"
+    decho "Final CFLAGS=$CFLAGS"
+    decho "Final CFLAGS_PRIVATE=$CFLAGS_PRIVATE"
+}

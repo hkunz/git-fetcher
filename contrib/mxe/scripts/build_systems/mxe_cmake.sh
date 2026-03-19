@@ -88,5 +88,10 @@ query_dependencies() {
                  sed -E 's/^[[:space:]]*find_(package|dependency)[[:space:]]*\([[:space:]]*([^ )]+).*/\2/I')
     done
     # Deduplicate and sort
-    DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sort -u))
+    DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sed 's/\${[^}]*}//g' | awk 'NF' | sort -u))
+}
+
+mxe_generate_pc_file_vars() {
+    # TODO
+    LIBS=$(printf ' -l%s' "${DEPENDENCIES[@]}" | sed -E 's/lib//Ig' | cut -c2-)
 }

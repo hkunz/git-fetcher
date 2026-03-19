@@ -130,16 +130,24 @@ SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
 BUILD_SYSTEM_LOWER=$(echo "$BUILD_SYSTEM" | tr '[:upper:]' '[:lower:]')
 BUILD_SYSTEM_FILE="$MXE_SCRIPT_DIR/build_systems/mxe_${BUILD_SYSTEM_LOWER}.sh"
 
+is_pc_missing() {
+    [[ -z "$PC_FILE" || ! -s "$TMP_DIR/$PC_FILE" ]]
+}
+
 # Source the appropriate file
 if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
     source "$BUILD_SYSTEM_FILE"
     mxe_query_build
+    if is_pc_missing; then
+        decho "Missing .pc file so generating..."
+        decho "Missing .pc file s found at '$TMP_DIR/$PC_FILE'. Generating fallback pkg-config variables..."
+        mxe_generate_pc_file_vars
+    fi
 else
     iecho "No support for build system: $BUILD_SYSTEM"
     return 1
 fi
 
-PC_FILE_LIBS=$(printf ' -l%s' "${DEPENDENCIES[@]}" | sed -E 's/lib//Ig' | cut -c2-)
 MXE_DEPENDENCIES=("cc" "${DEPENDENCIES[@]}")
 MXE_DEPENDENCIES=$(echo "${MXE_DEPENDENCIES[*]}" | sed -E "s/\b(lib)?alembic\b//Ig" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
 
@@ -192,7 +200,7 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
-if [[ -n "$PC_FILE" && -s "$TMP_DIR/$PC_FILE" ]]; then
+if ! is_pc_missing; then
     vecho "PC file exists and is not empty: $PC_FILE"
     DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
@@ -224,8 +232,13 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${IGNORE}|$IGNORE|g" \
 -e "s|\${CHECKSUM}|$CHECKSUM|g" \
 -e "s|\${DEPENDENCIES}|$MXE_DEPENDENCIES|g" \
--e "s|\${LIBS}|$PC_FILE_LIBS|g" \
 -e "s|\${PKG_SUBFOLDER}|$PKG_SUBFOLDER|g" \
+-e "s|\${REQUIRES_PRIVATE}|$REQUIRES_PRIVATE|g" \
+-e "s|\${REQUIRES}|$REQUIRES|g" \
+-e "s|\${LIBS_PRIVATE}|$LIBS_PRIVATE|g" \
+-e "s|\${LIBS}|$LIBS|g" \
+-e "s|\${CFLAGS_PRIVATE}|$CFLAGS_PRIVATE|g" \
+-e "s|\${CFLAGS}|$CFLAGS|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
 -e "/# BEGIN_NON_GITHUB/d" \
@@ -284,6 +297,8 @@ iecho "Generated test file: $TEST_FILE"
 # =============================================
 # Copy generated files to MXE_ROOT/src with overwrite prompt
 # =============================================
+overwrite_confirmed=false
+
 if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
     for file in "$OUTPUT_FILE" "$TEST_FILE"; do
         dest="$MXE_ROOT/src/$(basename "$file")"
@@ -293,6 +308,7 @@ if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
             if [[ "$answer" =~ ^[Yy]$ ]]; then
                 cp "$file" "$dest"
                 iecho "Overwritten $dest"
+                overwrite_confirmed=true
             else
                 iecho "Skipped $dest"
                 break
@@ -302,4 +318,11 @@ if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
             iecho "Copied $file to $dest"
         fi
     done
+fi
+
+# =============================================
+# Regenerate Note
+# =============================================
+if $overwrite_confirmed && is_pc_missing; then
+    iecho "Note: the generated '$PACKAGE_NAME.mk' may have incomplete variables for call to GENERATE_PC. For fully accurate values, build the MXE package with 'make $PACKAGE_NAME'. After building, re-run this script to let it query the built package and populate the missing .pc variables correctly."
 fi
