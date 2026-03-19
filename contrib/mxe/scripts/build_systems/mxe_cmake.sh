@@ -1,3 +1,5 @@
+source "$(dirname "$0")/build_systems/mxe_common.sh"
+
 # =============================================
 # mxe_cmake.sh
 # Functions for querying CMake build options and dependencies
@@ -89,9 +91,78 @@ query_dependencies() {
     done
     # Deduplicate and sort
     DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sed 's/\${[^}]*}//g' | awk 'NF' | sort -u))
+    MXE_DEPENDENCIES=($(alias_to_pkg "${DEPENDENCIES[@]}"))
+    decho "Detected CMake dependencies: ${DEPENDENCIES[*]}"
+    decho "Detected CMake dependencies (alias_to_pkg): ${MXE_DEPENDENCIES[*]}"
 }
 
 mxe_generate_pc_file_vars() {
-    # TODO
-    LIBS=$(printf ' -l%s' "${DEPENDENCIES[@]}" | sed -E 's/lib//Ig' | cut -c2-)
+    decho "Missing .pc file so generating..."
+    decho "Generating pkg-config variables from CMake files ..."
+
+    REQUIRES=($(printf "%s\n" "${DEPENDENCIES[@]}" | grep -v '^meson-wrapper$' | sort -u))
+    REQUIRES="${REQUIRES[*]}"
+    REQUIRES_PRIVATE=""  
+
+    decho "REQUIRES='$REQUIRES'"
+    decho "REQUIRES_PRIVATE='$REQUIRES_PRIVATE'"
+
+    LIBS=()
+    LIBS_PRIVATE=()
+
+    decho "Looking for tmp-$PACKAGE_NAME-* in $MXE_ROOT"
+    tmp_dir=$(find "$MXE_ROOT" -maxdepth 1 -type d -name "tmp-$PACKAGE_NAME-*" | sort -r | head -1)
+    
+    if [[ -n "$tmp_dir" ]]; then
+        decho "Found MXE tmp build dir: $tmp_dir"
+        while IFS= read -r lib; do
+            [[ -f "$lib" ]] || continue
+            libname=$(basename "$lib")
+            libname=${libname#lib}
+            libname=${libname%%.*}
+            decho "Found library file: $lib -> libname='$libname'"
+
+            if [[ "$libname" == "$PACKAGE_NAME" ]]; then
+                LIBS+=("-l$libname")
+            else
+                LIBS_PRIVATE+=("-l$libname")
+            fi
+        done < <(find "$tmp_dir" -type f -name "lib*.a" -o -name "lib*.so")
+    else
+        decho "No MXE tmp build dir found, fallback to $PREFIX/$TARGET/lib/"
+        shopt -s nullglob
+        files=("$PREFIX/$TARGET/lib/"*.a "$PREFIX/$TARGET/lib/"*.so)
+        decho "Found files in fallback lib dir: ${#files[@]}"
+        for lib in "${files[@]}"; do
+            [[ -f "$lib" ]] || continue
+            libname=$(basename "$lib")
+            libname=${libname#lib}
+            libname=${libname%%.*}
+            LIBS+=("-l$libname")
+            decho "Adding fallback library: $libname"
+        done
+        shopt -u nullglob
+    fi
+
+    LIBS="${LIBS[*]}"
+    LIBS_PRIVATE="${LIBS_PRIVATE[*]}"
+    decho "LIBS=$LIBS"
+    decho "LIBS_PRIVATE=$LIBS_PRIVATE"
+
+    # CFLAGS
+    CFLAGS=()
+    CFLAGS_PRIVATE=()
+    public_include="$SOURCE_ROOT/include"
+    decho "Looking for public include dir: $public_include"
+    if [[ -d "$public_include" ]]; then
+        CFLAGS+=("-I\$(PREFIX)/\$(TARGET)/include")
+        decho "Added public include: ${CFLAGS[*]}"
+    else
+        decho "No public include dir found at $public_include"
+    fi
+
+    CFLAGS="${CFLAGS[*]}"
+    CFLAGS_PRIVATE="${CFLAGS_PRIVATE[*]}"
+    decho "Final CFLAGS=$CFLAGS"
+    decho "Final CFLAGS_PRIVATE=$CFLAGS_PRIVATE"
 }

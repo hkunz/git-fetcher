@@ -1,3 +1,5 @@
+source "$(dirname "$0")/build_systems/mxe_common.sh"
+
 # =============================================
 # mxe_meson.sh
 # Functions for querying Meson build options and dependencies
@@ -79,8 +81,10 @@ query_dependencies() {
             )
             # Deduplicate
             DEPENDENCIES=($(printf '%s\n' "${DEPENDENCIES[@]}" | sort -u))
+            MXE_DEPENDENCIES=($(alias_to_pkg "${DEPENDENCIES[@]}"))
         fi
         decho "Detected Meson dependencies: ${DEPENDENCIES[*]}"
+        decho "Detected Meson dependencies (alias_to_pkg): ${MXE_DEPENDENCIES[*]}"
     else
         wecho "Meson not found; cannot query dependencies"
     fi

@@ -134,13 +134,13 @@ is_pc_missing() {
     [[ -z "$PC_FILE" || ! -s "$TMP_DIR/$PC_FILE" ]]
 }
 
+MXE_DEPENDENCIES=()
 # Source the appropriate file
 if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
     source "$BUILD_SYSTEM_FILE"
     mxe_query_build
     if is_pc_missing; then
-        decho "Missing .pc file so generating..."
-        decho "Missing .pc file s found at '$TMP_DIR/$PC_FILE'. Generating fallback pkg-config variables..."
+        decho "Missing .pc file at '$TMP_DIR/$PC_FILE'. Generating fallback pkg-config variables..."
         mxe_generate_pc_file_vars
     fi
 else
@@ -148,7 +148,7 @@ else
     return 1
 fi
 
-MXE_DEPENDENCIES=("cc" "${DEPENDENCIES[@]}")
+MXE_DEPENDENCIES=("cc" "${MXE_DEPENDENCIES[@]}")
 MXE_DEPENDENCIES=$(echo "${MXE_DEPENDENCIES[*]}" | sed -E "s/\b(lib)?alembic\b//Ig" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//')
 
 BUILD_OPTIONS_MULTILINE=""
@@ -293,6 +293,9 @@ fi
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
 
+if is_pc_missing; then
+    iecho "$(bold_bright_green "NOTE"): the generated '$PACKAGE_NAME.mk' may have incomplete variables for call to GENERATE_PC. For fully accurate values, build the MXE package with 'make $PACKAGE_NAME'. After building, re-run this script to let it query the built package and populate the missing .pc variables correctly."
+fi
 
 # =============================================
 # Copy generated files to MXE_ROOT/src with overwrite prompt
@@ -300,6 +303,9 @@ iecho "Generated test file: $TEST_FILE"
 overwrite_confirmed=false
 
 if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
+    # remove the line that deletes the per-package temporary build directory (TMP_DIR, e.g. tmp-<pkg>-<target>) so it is preserved after successful builds for inspection/debugging (e.g. analyzing build artifacts or dependencies)
+    sed -i "/rm -rfv[[:space:]]*'\$(2)'/d" "$MXE_ROOT/Makefile"
+
     for file in "$OUTPUT_FILE" "$TEST_FILE"; do
         dest="$MXE_ROOT/src/$(basename "$file")"
         if [[ -e "$dest" ]]; then
@@ -318,11 +324,4 @@ if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
             iecho "Copied $file to $dest"
         fi
     done
-fi
-
-# =============================================
-# Regenerate Note
-# =============================================
-if $overwrite_confirmed && is_pc_missing; then
-    iecho "Note: the generated '$PACKAGE_NAME.mk' may have incomplete variables for call to GENERATE_PC. For fully accurate values, build the MXE package with 'make $PACKAGE_NAME'. After building, re-run this script to let it query the built package and populate the missing .pc variables correctly."
 fi
