@@ -28,6 +28,7 @@ resolve_archive() {
         final_ref="${TAG:-$BRANCH}"
     else
         iecho "Release tag '$final_ref' found for $owner_repo"
+        TAG="$final_ref"
     fi
 
     set_archive_info "$owner_repo" "$final_ref" "$api"

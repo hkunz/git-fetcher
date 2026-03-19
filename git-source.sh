@@ -162,32 +162,36 @@ get_ref_type() {
 # Decide whether we need to redownload
 # =============================================
 should_redownload() {
-    if [[ "$FORCE_DOWNLOAD" == true ]]; then
+    # Force download always overrides cache
+    [[ "$FORCE_DOWNLOAD" == true ]] && return 0
+
+    # If no DB entry or archive file missing → redownload
+    [[ -z "$entry" || -z "$ARCHIVE_FILE_DB" || ! -f "$ARCHIVE_FILE_DB" ]] && return 0
+
+    # Load DB values
+    local tag_db branch_db ref_db
+    tag_db=$(get_entry_field '.latest_tag')
+    branch_db=$(get_entry_field '.default_branch')
+    ref_db=$(get_entry_field '.ref_name')
+
+    # If ALL ref identifiers are empty → invalid cache → redownload
+    if [[ -z "$tag_db" && -z "$branch_db" && -z "$ref_db" ]]; then
         return 0
     fi
-    if [[ -z "$entry" || ! -f "$ARCHIVE_FILE_DB" ]]; then
-        return 0
-    fi
+    # No specific ref requested → DB copy is fine
     if [[ -z "$REQUESTED_REF_NAME" ]]; then
-        return 1  # no ref specified, DB is fine
+        return 1
     fi
-
-    local ref_type
-    ref_type=$(get_ref_type "$REQUESTED_REF_NAME")
-
-    case "$ref_type" in
-        commit)
-            [[ "$REQUESTED_REF_NAME" != "$(get_entry_field '.ref_name')" ]] && return 0
-            ;;
-        tag)
-            [[ "$REQUESTED_REF_NAME" != "$(get_entry_field '.latest_tag')" ]] && return 0
-            ;;
-        branch)
-            [[ "$REQUESTED_REF_NAME" != "$(get_entry_field '.default_branch')" ]] && return 0
-            ;;
-    esac
-
-    return 1  # cache matches requested ref
+    local ref="$REQUESTED_REF_NAME"
+    # Match only against NON-empty DB fields
+    if [[ -n "$ref" && (
+            ( -n "$tag_db" && "$ref" == "$tag_db" ) ||
+            ( -n "$branch_db" && "$ref" == "$branch_db" ) ||
+            ( -n "$ref_db" && "$ref" == "$ref_db" )
+        ) ]]; then
+        return 1  # Already cached
+    fi
+    return 0  # Otherwise → need to redownload
 }
 
 # =============================================
@@ -213,10 +217,11 @@ download_archive_if_needed() {
 }
 
 # =============================================
-# Main logic
+# Load DB and check if we need download
 # =============================================
 ARCHIVE_FILE_DB=$(get_entry_field '.archive')
 load_from_db
+ARCHIVE_FILE_DB="$ARCHIVE_FILE"
 
 if should_redownload; then
     if [[ -n "$REQUESTED_REF_NAME" ]]; then

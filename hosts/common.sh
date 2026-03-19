@@ -183,16 +183,29 @@ set_archive_info() {
     local ref="$2"
     local api="$3"
 
-    decho "Final ref chosen: '$ref' (TAG='$TAG', BRANCH='$BRANCH')"
+    decho "Final ref chosen: '$ref' (TAG='$TAG', BRANCH='$BRANCH', REF='$REF_NAME')"
+
     if [[ -n "$TAG" ]]; then
         ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$TAG" "tags")
-    else
+
+    elif [[ -n "$BRANCH" ]]; then
         ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$BRANCH" "heads")
+
+    elif [[ -n "$REF_NAME" ]]; then
+        # commit or custom ref
+        ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$REF_NAME" "")
+
+    else
+        eecho "Error: No valid ref (TAG/BRANCH/REF_NAME all empty)"
+        exit 1
     fi
+
     readarray -t curl_args < <(curl_header "$HOST")
+
     ARCHIVE_FILE="$(basename "$repo")-${ref}.tar.gz"
+
     DESCRIPTION=$(curl -s "${curl_args[@]}" "$api" | jq -r '.description // empty')
-    DESCRIPTION="${DESCRIPTION:-Custom ref ${safe_ref} (no upstream description)}"
+    DESCRIPTION="${DESCRIPTION:-Custom ref ${ref} (no upstream description)}"
 }
 
 # ==============================
