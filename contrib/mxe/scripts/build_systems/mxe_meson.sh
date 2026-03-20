@@ -123,7 +123,6 @@ detect_meson_subfolder() {
 # Generate values needed for GENERATE_PC
 # ===================================================
 mxe_generate_pc_file_vars() {
-    decho "Missing .pc file so Generating pkg-config variables ..."
 
     REQUIRES=($(printf "%s " "${DEPENDENCIES[@]}" | tr ' ' '\n' | grep -v '^meson-wrapper$' | sort -u))
     REQUIRES="${REQUIRES[*]}"
