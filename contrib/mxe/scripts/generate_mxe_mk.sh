@@ -302,7 +302,10 @@ envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
 
 if is_pc_missing; then
-    iecho "$(bold_bright_green "NOTE"): the generated '$PACKAGE_NAME.mk' may have incomplete variables for call to GENERATE_PC. For fully accurate values, build the MXE package with 'make $PACKAGE_NAME'. After building, re-run this script to let it query the built package and populate the missing .pc variables correctly."
+    iecho "$(bold_bright_green "NOTE"): the generated '$PACKAGE_NAME.mk' may have incomplete variables for GENERATE_PC,"
+    iecho --no-prefix "       or even the package may dynamically generate a .pc file after building,"
+    iecho --no-prefix "       so manual generation may be unnecessary. For accurate values, build the MXE package"
+    iecho --no-prefix "       with 'make $PACKAGE_NAME' and re-run this script to populate the missing .pc variables."
 fi
 
 # =============================================
