@@ -128,6 +128,9 @@ mxe_generate_pc_file_vars() {
                 LIBS_PRIVATE+=("-l$libname")
             fi
         done < <(find "$tmp_dir" -type f -name "lib*.a" -o -name "lib*.so")
+        PC_FILE="$(find_pc_file $PACKAGE_NAME "$MXE_ROOT/usr/$MXE_TARGET/lib")"
+        decho "Detect in $MXE_ROOT/usr/$MXE_TARGET"
+        decho "Detected PC_FILE=$PC_FILE"
     else
         decho "No MXE tmp build dir found, fallback to $PREFIX/$TARGET/lib/"
         shopt -s nullglob

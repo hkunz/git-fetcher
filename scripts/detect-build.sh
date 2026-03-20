@@ -79,7 +79,7 @@ while IFS= read -r file; do
         */go.mod|go.mod)
             [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Go"
             ;;
-        *.pc|*.pc.in)
+        *.pc|*.pc.in|*/*.pc|*/*.pc.in|*/*/*.pc|*/*/*.pc.in)
             [[ -z "$PC_FILE" ]] && PC_FILE="$file"
             ;;
     esac

@@ -14,7 +14,7 @@ mxe_query_build() {
     decho "Meson subfolder: '${PKG_SUBFOLDER}'"
     query_build_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
     query_dependencies "$SOURCE_ROOT" "$TMP_BUILD_DIR"
-    DEPENDENCIES=("meson-wrapper" "${DEPENDENCIES[@]}")
+    MXE_DEPENDENCIES=("meson-wrapper" "${DEPENDENCIES[@]}")
 }
 
 # =============================================
@@ -154,6 +154,9 @@ mxe_generate_pc_file_vars() {
             fi
             decho "Found lib: $lib -> $([[ "$libname" == "vmaf" ]] && echo "public" || echo "private")"
         done < <(find "$tmp_dir" -type f -name "lib*.a" -o -name "lib*.so")
+        PC_FILE="$(find_pc_file $PACKAGE_NAME "$MXE_ROOT/usr/$MXE_TARGET/lib")"
+        decho "Detect in $MXE_ROOT/usr/$MXE_TARGET"
+        decho "Detected PC_FILE=$PC_FILE"
     else
         decho "No MXE tmp build dir found, fallback to $PREFIX/$TARGET/lib/"
         shopt -s nullglob

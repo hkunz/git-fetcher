@@ -24,3 +24,25 @@ alias_to_pkg() {
     done
     echo "${resolved[@]}"
 }
+
+find_pc_file() {
+    local pkg_name="$1"
+    local dir="$2"
+    decho "Trying to find .pc file for package '$pkg_name' in $dir..."
+    local pc_file=""
+    if [[ -d "$dir" ]]; then
+        while IFS= read -r pc; do
+            [[ -f "$pc" ]] || continue
+            # Only accept .pc files that contain the package name
+            if [[ $(basename "$pc") == *"$pkg_name"*".pc"* ]]; then
+                # Read just the first line and skip if it contains "MXE" then we know it's MXE generated and the package didn't provide any
+                read -r first_line < "$pc"
+                if [[ ! "$first_line" =~ MXE ]]; then
+                    pc_file="$pc"
+                    break
+                fi
+            fi
+        done < <(find "$dir" -type f \( -name "*.pc" -o -name "*.pc.in" \))
+    fi
+    echo "$pc_file"
+}

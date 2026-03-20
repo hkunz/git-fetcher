@@ -131,7 +131,14 @@ BUILD_SYSTEM_LOWER=$(echo "$BUILD_SYSTEM" | tr '[:upper:]' '[:lower:]')
 BUILD_SYSTEM_FILE="$MXE_SCRIPT_DIR/build_systems/mxe_${BUILD_SYSTEM_LOWER}.sh"
 
 is_pc_missing() {
-    [[ -z "$PC_FILE" || ! -s "$TMP_DIR/$PC_FILE" ]]
+    if [[ -z "$PC_FILE" ]]; then
+        return 0  # missing
+    fi
+    if [[ "$PC_FILE" = /* ]]; then
+        [[ ! -s "$PC_FILE" ]]
+    else
+        [[ ! -s "$TMP_DIR/$PC_FILE" ]]
+    fi
 }
 
 MXE_DEPENDENCIES=()
@@ -272,11 +279,12 @@ iecho "Generated MXE .mk file: $OUTPUT_FILE"
 TEST_TEMPLATE="$GEN_MXE_ROOT/templates/test.lang.template"
 TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME}-test.$TEST_LANG"
 
+export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 export TEST_LANG
 export PACKAGE_NAME
 export COMPILER=$([[ "$TEST_LANG" == "cpp" ]] && echo g++ || echo gcc)
-export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 export DEPENDENCIES="-l$PACKAGE_NAME"
+
 
 if [[ "$TEST_LANG" == "cpp" ]]; then
     export INCLUDES="#include <cstdio>
