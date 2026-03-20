@@ -229,7 +229,7 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${VERSION}|$VERSION|g" \
 -e "s|\${DESCRIPTION}|$DESCRIPTION|g" \
 -e "s|\${ARCHIVE_URL}|$ARCHIVE_URL|g" \
--e "s|\${IGNORE}|$IGNORE|g" \
+-e "s|\([[:space:]]*\)\${IGNORE}|${IGNORE:+\1$IGNORE}|g" \
 -e "s|\${CHECKSUM}|$CHECKSUM|g" \
 -e "s|\${DEPENDENCIES}|$MXE_DEPENDENCIES|g" \
 -e "s|\${PKG_SUBFOLDER}|$PKG_SUBFOLDER|g" \
