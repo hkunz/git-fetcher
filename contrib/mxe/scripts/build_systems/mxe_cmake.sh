@@ -100,7 +100,7 @@ mxe_generate_pc_file_vars() {
     decho "Missing .pc file so generating..."
     decho "Generating pkg-config variables from CMake files ..."
 
-    REQUIRES=($(printf "%s\n" "${DEPENDENCIES[@]}" | grep -v '^meson-wrapper$' | sort -u))
+    REQUIRES=($(printf "%s\n" "${MXE_DEPENDENCIES[@]}" | grep -v '^meson-wrapper$' | sort -u))
     REQUIRES="${REQUIRES[*]}"
     REQUIRES_PRIVATE=""  
 
@@ -155,7 +155,7 @@ mxe_generate_pc_file_vars() {
     public_include="$SOURCE_ROOT/include"
     decho "Looking for public include dir: $public_include"
     if [[ -d "$public_include" ]]; then
-        CFLAGS+=("-I\$(PREFIX)/\$(TARGET)/include")
+        CFLAGS+=("\$(PREFIX)/\$(TARGET)/include")
         decho "Added public include: ${CFLAGS[*]}"
     else
         decho "No public include dir found at $public_include"
@@ -163,6 +163,10 @@ mxe_generate_pc_file_vars() {
 
     CFLAGS="${CFLAGS[*]}"
     CFLAGS_PRIVATE="${CFLAGS_PRIVATE[*]}"
+    if [[ -z "$CFLAGS" ]]; then
+        CFLAGS="\$(PREFIX)/\$(TARGET)/include"
+        decho "[DEBUG] CFLAGS was empty, using fallback: $CFLAGS"
+    fi
     decho "Final CFLAGS=$CFLAGS"
     decho "Final CFLAGS_PRIVATE=$CFLAGS_PRIVATE"
 }

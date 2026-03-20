@@ -177,11 +177,11 @@ mxe_generate_pc_file_vars() {
 
     public_include="$SOURCE_ROOT$PKG_SUBFOLDER/include"
     if [[ -d "$public_include" ]]; then
-        CFLAGS+=("-I\$(PREFIX)/\$(TARGET)/$(basename "$public_include")")
-        decho "Public include: -I\$(PREFIX)/\$(TARGET)/$(basename "$public_include")"
+        CFLAGS+=("\$(PREFIX)/\$(TARGET)/$(basename "$public_include")")
+        decho "Public include: \$(PREFIX)/\$(TARGET)/$(basename "$public_include")"
     fi
 
-    CFLAGS=("-I\$(PREFIX)/\$(TARGET)/include")
+    CFLAGS=("\$(PREFIX)/\$(TARGET)/include")
     CFLAGS="${CFLAGS[*]}"
     CFLAGS_PRIVATE="${CFLAGS_PRIVATE[*]}"
     decho "Final CFLAGS=$CFLAGS"
