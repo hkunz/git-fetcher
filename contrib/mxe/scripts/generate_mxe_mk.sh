@@ -220,7 +220,7 @@ case "$BUILD_SYSTEM" in
 esac
 
 if is_pc_missing; then
-    PC_FILE_NAME=$PACKAGE_NAME
+    PC_FILE_NAME='\$(PKG)'
 else
     vecho "PC file exists and is not empty: $PC_FILE"
     DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
