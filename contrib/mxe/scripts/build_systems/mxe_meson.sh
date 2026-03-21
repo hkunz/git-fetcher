@@ -1,3 +1,4 @@
+set -e
 source "$(dirname "$0")/build_systems/mxe_common.sh"
 
 # =============================================

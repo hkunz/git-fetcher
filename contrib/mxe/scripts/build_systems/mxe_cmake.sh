@@ -1,3 +1,4 @@
+set -e
 source "$(dirname "$0")/build_systems/mxe_common.sh"
 
 # =============================================
@@ -34,6 +35,8 @@ mxe_query_build() {
 query_build_options() {
     local src_dir="$1"
     local build_dir="$2"
+
+    check_cmake_version "$src_dir"
 
     mkdir -p "$build_dir"
     cd "$build_dir" || return 1
@@ -168,4 +171,18 @@ mxe_generate_pc_file_vars() {
     fi
     decho "Final CFLAGS=$CFLAGS"
     decho "Final CFLAGS_PRIVATE=$CFLAGS_PRIVATE"
+}
+
+check_cmake_version() {
+    local src_dir="$1"
+    local required=$(grep -i 'CMAKE_MINIMUM_REQUIRED' "$src_dir/CMakeLists.txt" | head -n1 | sed -E 's/.*VERSION[[:space:]]+([0-9]+\.[0-9]+).*/\1/I')
+    if [[ -n "$required" ]]; then
+        local current=$(cmake --version | head -n1 | awk '{print $3}')
+        # Simple comparison: convert versions to zero-padded numbers for numeric comparison
+        vercomp() { printf '%03d%03d%03d\n' $(echo "$1" | tr '.' ' '); }
+        if [[ $(vercomp "$current") -lt $(vercomp "$required") ]]; then
+            eecho "$(bold_bright_red "Error: Project requires CMake $required or higher. You have $current.")"
+            exit 1
+        fi
+    fi
 }
