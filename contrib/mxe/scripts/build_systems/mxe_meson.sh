@@ -10,6 +10,7 @@ source "$(dirname "$0")/build_systems/mxe_common.sh"
 
 mxe_query_build() {
     TMP_BUILD_DIR="$SOURCE_ROOT/build-meson"
+    # check_meson_version "$SOURCE_ROOT"
     decho "Meson build folder: $TMP_BUILD_DIR"
     detect_meson_subfolder "$SOURCE_ROOT"
     decho "Meson subfolder: '${PKG_SUBFOLDER}'"
@@ -190,4 +191,21 @@ mxe_generate_pc_file_vars() {
     CFLAGS_PRIVATE="${CFLAGS_PRIVATE[*]}"
     decho "Final CFLAGS=$CFLAGS"
     decho "Final CFLAGS_PRIVATE=$CFLAGS_PRIVATE"
+}
+
+check_meson_version() {
+    local src_dir="$1"
+    if ! command -v meson >/dev/null 2>&1; then
+        echo "[ERROR] Meson not found; please install it."
+        exit 1
+    fi
+    local required=$(grep -i 'meson_version' "$src_dir/meson.build" | head -n1 | sed -E "s/.*meson_version:[[:space:]]*'(>=|=)?([0-9\.]+)'.*/\2/I")
+    if [[ -n "$required" ]]; then
+        local current=$(meson --version)
+        vercomp() { printf '%03d%03d%03d\n' $(echo "$1" | tr '.' ' '); }
+        if [[ $(vercomp "$current") -lt $(vercomp "$required") ]]; then
+            echo "[ERROR] Project requires Meson $required or higher. You have $current."
+            exit 1
+        fi
+    fi
 }
