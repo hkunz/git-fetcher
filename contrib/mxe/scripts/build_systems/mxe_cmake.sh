@@ -7,9 +7,6 @@ source "$(dirname "$0")/build_systems/mxe_common.sh"
 # To be sourced by generate_mxe_mk.sh
 # =============================================
 
-# =============================================
-# Query CMake options and dependencies
-# =============================================
 mxe_query_build() {
     TMP_BUILD_DIR="$SOURCE_ROOT/build"
     decho "CMake build folder: $TMP_BUILD_DIR"
@@ -152,7 +149,6 @@ mxe_generate_pc_file_vars() {
     decho "LIBS=$LIBS"
     decho "LIBS_PRIVATE=$LIBS_PRIVATE"
 
-    # CFLAGS
     CFLAGS=()
     CFLAGS_PRIVATE=()
     public_include="$SOURCE_ROOT/include"

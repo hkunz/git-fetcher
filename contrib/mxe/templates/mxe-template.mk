@@ -68,5 +68,5 @@ ${BUILD_OPTIONS_MULTILINE}
 	# compile a test program to verify the library is usable
 	'$(TARGET)-g++' '$(TEST_FILE)' \
 		-o '$(PREFIX)/$(TARGET)/bin/test-$(PKG).exe' \
-		`'$(TARGET)-pkg-config' $(PKG) --cflags --libs`
+		`'$(TARGET)-pkg-config' ${PC_FILE_NAME} --cflags --libs`
 endef

@@ -207,10 +207,13 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
-if ! is_pc_missing; then
+if is_pc_missing; then
+    PC_FILE_NAME=$PACKAGE_NAME
+else
     vecho "PC file exists and is not empty: $PC_FILE"
     DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
+    PC_FILE_NAME=$(basename "$PC_FILE" .pc)
 fi
 
 TAG_PREFIX="${TAG%%[0-9]*}"
@@ -246,6 +249,7 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${LIBS}|$LIBS|g" \
 -e "s|\${CFLAGS_PRIVATE}|$CFLAGS_PRIVATE|g" \
 -e "s|\${CFLAGS}|$CFLAGS|g" \
+-e "s|\${PC_FILE_NAME}|$PC_FILE_NAME|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
 -e "/# BEGIN_NON_GITHUB/d" \
