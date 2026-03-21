@@ -318,10 +318,11 @@ envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
 
 if is_pc_missing; then
-    iecho "$(bold_bright_green "NOTE"): the generated '$PACKAGE_NAME.mk' may have incomplete variables for GENERATE_PC,"
-    iecho --no-prefix "       or even the package may dynamically generate a .pc file after building,"
-    iecho --no-prefix "       so manual generation may be unnecessary. For accurate values, build the MXE package"
-    iecho --no-prefix "       with 'make $PACKAGE_NAME' and re-run this script to populate the missing .pc variables."
+    echo
+    echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME.mk' may have incomplete variables for GENERATE_PC,"
+    echo "       or even the package may dynamically generate a .pc file after building,"
+    echo "       so manual generation may be unnecessary. For accurate values, build the MXE package"
+    echo "       with 'make $PACKAGE_NAME MXE_KEEP_TMP=1' and re-run this script to populate the missing .pc variables."
 fi
 
 # =============================================
@@ -329,13 +330,26 @@ fi
 # =============================================
 overwrite_confirmed=false
 
-if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
-    # remove the line that deletes the per-package temporary build directory (TMP_DIR, e.g. tmp-<pkg>-<target>) so it is preserved after successful builds for inspection/debugging (e.g. analyzing build artifacts or dependencies)
-    sed -i "/rm -rfv[[:space:]]*'\$(2)'/d" "$MXE_ROOT/Makefile"
+FILES=("$OUTPUT_FILE")
 
-    for file in "$OUTPUT_FILE" "$TEST_FILE"; do
+echo
+
+if [[ "$GENERATE_MXE_TESTFILE" == true ]]; then
+    FILES+=("$TEST_FILE")
+fi
+
+if [[ -n "$MXE_ROOT" && -d "$MXE_ROOT/src" ]]; then
+    if ! grep -q '^[[:space:]]*MXE_KEEP_TMP' "$MXE_ROOT/Makefile"; then
+        # remove the line that deletes the per-package temporary build directory (TMP_DIR, e.g. tmp-<pkg>-<target>) so it is preserved after successful builds for inspection/debugging (e.g. analyzing build artifacts or dependencies)
+        sed -i "/rm -rfv[[:space:]]*'\$(2)'/d" "$MXE_ROOT/Makefile"
+    fi
+    # replace the MXE_TARGETS line with MXE_TARGETS=$TARGET
+    sed -i -E "0,/MXE_TARGETS/{s/^[[:space:]]*MXE_TARGETS[[:space:]]*[:]?=[[:space:]]*.*/MXE_TARGETS        := $TARGET/}" "$MXE_ROOT/Makefile"
+
+    for file in "${FILES[@]}"; do
         dest="$MXE_ROOT/src/$(basename "$file")"
         if [[ -e "$dest" ]]; then
+            iecho "Copying generated file to $MXE_ROOT/src/"
             echo -e "$(bright_red "[PROMPT]") File exists: $(bright_yellow $dest)"
             read -p "$(bright_red "[?]") Overwrite? $(bright_yellow "[y/N]") " answer
             if [[ "$answer" =~ ^[Yy]$ ]]; then

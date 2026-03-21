@@ -13,7 +13,8 @@ LIST_BRANCHES=false
 LIST_TAGS=false
 VERBOSE=false
 DEBUG=false
-GENERATE_MXE=false
+GENERATE_MXE_MAKEFILE=false
+GENERATE_MXE_TESTFILE=false
 FORCE_DOWNLOAD=false
 GH_MODE="tags"
 INPUT=""
@@ -31,6 +32,7 @@ print_usage() {
     echo "  --debug                      Enable debug output"
     echo "  --ref=<name>                 Download a specific branch, tag, or commit"
     echo "  --generate-mxe-makefile      Generate MXE .mk file after download"
+    echo "  --generate-mxe-testfile      Generate MXE test file for .mk"
     echo "  --force                      Redownload archive even if it exists"
     echo "  -h, --help                   Show this help message"
 }
@@ -45,12 +47,15 @@ while [[ $# -gt 0 ]]; do
         -v|--verbose) export VERBOSE=true ;;
         --debug) export DEBUG=true ;;
         --generate-mxe-makefile=*)
-            GENERATE_MXE=true
+            GENERATE_MXE_MAKEFILE=true
             MXE_ARGS="${1#*=}"
             ;;
         --generate-mxe-makefile)
-            GENERATE_MXE=true
+            GENERATE_MXE_MAKEFILE=true
             MXE_ARGS="default"
+            ;;
+        --generate-mxe-testfile)
+            export GENERATE_MXE_TESTFILE=true
             ;;
         --ref=*)
             REQUESTED_REF_NAME="${1#*=}"
@@ -282,7 +287,7 @@ iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 # =============================================
 # Optional: generate MXE .mk file
 # =============================================
-if [[ "$GENERATE_MXE" == true ]]; then
+if [[ "$GENERATE_MXE_MAKEFILE" == true ]]; then
     bash "$ROOT_DIR/contrib/mxe/scripts/generate_mxe_mk.sh" \
         --mxe_args "$MXE_ARGS" \
         --owner_repo "$OWNER_REPO" \
@@ -297,4 +302,4 @@ if [[ "$GENERATE_MXE" == true ]]; then
         $( [[ "$DEBUG" == true ]] && echo --debug )
 fi
 
-iecho "Completed"
+iecho "Done"

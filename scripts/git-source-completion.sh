@@ -14,7 +14,7 @@ _git_source_completions() {
         :
     else
         # fallback hardcoded flags
-        opts="-b --list-branches -v --verbose --debug --offline -h --help --generate-mxe-makefile"
+        opts="-b --list-branches -v --verbose --debug --offline -h --help --generate-mxe-makefile --generate-mxe-testfile"
     fi
 
     COMPREPLY=( $(compgen -W "${opts}" -- "$cur") )

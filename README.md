@@ -86,7 +86,7 @@ source scripts/git-source-completion.sh
 The `git-source` command can generate MXE `.mk` files for use in your MXE project using the `--generate-mxe-makefile` or `--generate-mxe-makefile=libname`option. If you want the generated files to be automatically copied into your MXE project, you can set the following environment variables **before running the generator**:
 
 ```bash
-export MXE_ROOT="/path/to/your/mxe"  # Path to your MXE root directory
+export MXE_ROOT="/path/to/your/mxe"  # Path to your MXE root directory, automatically set if you run git-source from mxe root
 export MXE_TARGET="x86_64-w64-mingw32.static"  # Target triplet (optional, defaults to x86_64-w64-mingw32.static)
 export GITHUB_TOKEN="<your_token_here>"  # optional, avoids API rate limits"
 ```
