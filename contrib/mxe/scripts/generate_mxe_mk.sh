@@ -14,6 +14,18 @@ TMP_DIR="$ROOT_DIR/tmp"
 source "$SCRIPT_DIR/lib.sh"
 source "$SCRIPT_DIR/lib-color.sh"
 
+if [[ -f "Makefile" && -d "src" && $(grep -o 'MXE' Makefile | wc -l) -ge 40 ]]; then
+    vecho "Running inside of MXE root detected: $(pwd)"
+    if [[ -z "$MXE_ROOT" ]]; then
+        export MXE_ROOT="$(pwd)"
+        vecho "MXE_ROOT environment variable set to $MXE_ROOT"
+    else
+        vecho "MXE_ROOT already set: $MXE_ROOT"
+    fi
+else
+    vecho "Currently not running inside MXE root: $(pwd)"
+fi
+
 iecho "Preparing MXE Makefile for the target library..."
 
 ARCHIVE_FILE=""
