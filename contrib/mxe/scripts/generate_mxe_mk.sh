@@ -153,6 +153,7 @@ is_pc_missing() {
     fi
 }
 
+BUILD_SYSTEM_SUPPORT=true
 MXE_DEPENDENCIES=()
 # Source the appropriate file
 if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
@@ -163,8 +164,10 @@ if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
         mxe_generate_pc_file_vars
     fi
 else
-    iecho "No support for build system: $BUILD_SYSTEM"
-    return 1
+    BUILD_SYSTEM_SUPPORT=false
+    echo
+    wecho "$(bold_bright_yellow "Warning: No support for build system"): $(bold_bright_cyan "$BUILD_SYSTEM")"
+    echo
 fi
 
 MXE_DEPENDENCIES=("cc" "${MXE_DEPENDENCIES[@]}")
@@ -317,7 +320,7 @@ fi
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
 
-if is_pc_missing; then
+if is_pc_missing && [ "$BUILD_SYSTEM_SUPPORT" = true ]; then
     echo
     echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME.mk' may have incomplete variables for GENERATE_PC,"
     echo "       or even the package may dynamically generate a .pc file after building,"
