@@ -24,38 +24,37 @@ define $(PKG)_BUILD
 
 # BEGIN_CMAKE
 	# configure package with cmake
-	cd "$(BUILD_DIR)" && '$(TARGET)-cmake' "$(SOURCE_DIR)" \
-		-DCMAKE_INSTALL_PREFIX='$(PREFIX)/$(TARGET)' \
-		-DCMAKE_PREFIX_PATH='$(PREFIX)/$(TARGET)' \
+	cd "$(BUILD_DIR)" && "$(TARGET)-cmake" "$(SOURCE_DIR)" \
+		-DCMAKE_INSTALL_PREFIX="$(PREFIX)/$(TARGET)" \
+		-DCMAKE_PREFIX_PATH="$(PREFIX)/$(TARGET)" \
 		-DBUILD_SHARED_LIBS=$(CMAKE_SHARED_BOOL) \
 ${BUILD_OPTIONS_MULTILINE}
-
-	# build cmake package and install
-	$(MAKE) -C '$(BUILD_DIR)' -j '$(JOBS)'
-	$(MAKE) -C '$(BUILD_DIR)' -j 1 install
 # END_CMAKE
 # BEGIN_MESON
 	# configure package with meson
-	'$(MXE_MESON_WRAPPER)' $(MXE_MESON_OPTS) \
+	$(MXE_MESON_WRAPPER) $(MXE_MESON_OPTS) \
 ${BUILD_OPTIONS_MULTILINE}
-		'$(BUILD_DIR)' '$(SOURCE_DIR)${PKG_SUBFOLDER}'
-
-	# build meson package and install
-	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j '$(JOBS)'
-	'$(MXE_NINJA)' -C '$(BUILD_DIR)' -j 1 install
+		"$(BUILD_DIR)" "$(SOURCE_DIR)${PKG_SUBFOLDER}"
 # END_MESON
 # BEGIN_OTHER_BUILD_SYSTEM
-    # Configure package
-	# Build package and install
+	# Configure package
+	cd "$(BUILD_DIR)" && \
+	"$(SOURCE_DIR)/configure" $(MXE_CONFIGURE_OPTS) \
+		--host="$(TARGET)" \
+		--prefix="$(PREFIX)/$(TARGET)"
 # END_OTHER_BUILD_SYSTEM
+
+	# build package and install
+	$(${MAKE_CMD}) -C "$(BUILD_DIR)" -j $(JOBS)
+	$(${MAKE_CMD}) -C "$(BUILD_DIR)" -j 1 install
 
 # BEGIN_PC_FILE
 	# Only needed if the project does not ship a .pc file
 	$(call GENERATE_PC, \
-		$(PREFIX)/$(TARGET), \
-		$(PKG), \
-		$($(PKG)_DESCR), \
-		$($(PKG)_VERSION), \
+		"$(PREFIX)/$(TARGET)", \
+		"$(PKG)", \
+		"$($(PKG)_DESCR)", \
+		"$($(PKG)_VERSION)", \
 		${REQUIRES}, \
 		${REQUIRES_PRIVATE}, \
 		${LIBS}, \
@@ -66,7 +65,7 @@ ${BUILD_OPTIONS_MULTILINE}
 # END_PC_FILE
 
 	# compile a test program to verify the library is usable
-	'$(TARGET)-g++' '$(TEST_FILE)' \
-		-o '$(PREFIX)/$(TARGET)/bin/test-$(PKG).exe' \
-		`'$(TARGET)-pkg-config' ${PC_FILE_NAME} --cflags --libs`
+	"$(TARGET)-g++" "$(TEST_FILE)" \
+		-o "$(PREFIX)/$(TARGET)/bin/test-$(PKG).exe" \
+		`"$(TARGET)-pkg-config" "${PC_FILE_NAME}" --cflags --libs`
 endef

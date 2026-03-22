@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
             MXE_ARGS="${1#*=}"
             ;;
         --generate-mxe-makefile)
-            GENERATE_MXE_MAKEFILE=true
+            export GENERATE_MXE_MAKEFILE=true
             MXE_ARGS="default"
             ;;
         --generate-mxe-testfile)
@@ -286,7 +286,7 @@ iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 # =============================================
 # Optional: generate MXE .mk file
 # =============================================
-if [[ "$GENERATE_MXE_MAKEFILE" == true ]]; then
+if [[ "$GENERATE_MXE_MAKEFILE" == true || "$GENERATE_MXE_TESTFILE" == true ]]; then
     bash "$ROOT_DIR/contrib/mxe/scripts/generate_mxe_mk.sh" \
         --mxe_args "$MXE_ARGS" \
         --owner_repo "$OWNER_REPO" \

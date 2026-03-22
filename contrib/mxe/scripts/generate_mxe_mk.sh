@@ -195,7 +195,8 @@ GEN_MXE_ROOT="$ROOT_DIR/contrib/mxe"
 OUTPUT_DIR="$GEN_MXE_ROOT/generated"
 TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
 TEMPLATE="$GEN_MXE_ROOT/templates/mxe-template.mk"
-OUTPUT_FILE="$OUTPUT_DIR/$PACKAGE_NAME.mk"
+OUTPUT_MAKEFILE="$OUTPUT_DIR/$PACKAGE_NAME.mk"
+MAKE_CMD="MAKE"
 IGNORE=""
 
 mkdir -p "$OUTPUT_DIR"
@@ -216,6 +217,7 @@ case "$BUILD_SYSTEM" in
     Meson)
         BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release \\"
         DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
+        MAKE_CMD="MXE_NINJA"
         ;;
     *)
         DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_MESON/,/# END_MESON/d'
@@ -264,6 +266,7 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${LIBS}|$LIBS|g" \
 -e "s|\${CFLAGS_PRIVATE}|$CFLAGS_PRIVATE|g" \
 -e "s|\${CFLAGS}|$CFLAGS|g" \
+-e "s|\${MAKE_CMD}|$MAKE_CMD|g" \
 -e "s|\${PC_FILE_NAME}|$PC_FILE_NAME|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
@@ -279,7 +282,7 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "/# END_INCLUDE/d" \
 -e "/# BEGIN_PC_FILE/d" \
 -e "/# END_PC_FILE/d" \
-"$TEMPLATE" > "$OUTPUT_FILE"
+"$TEMPLATE" > "$OUTPUT_MAKEFILE"
 
 # inserting a multiline block of build options via temporary file to work around sed's inability to handle multiline replacements
 TMP=$(mktemp)
@@ -287,10 +290,10 @@ echo -e "$BUILD_OPTIONS_MULTILINE" > "$TMP"
 sed -i "/\${BUILD_OPTIONS_MULTILINE}/{
     r $TMP
     d
-}" "$OUTPUT_FILE"
+}" "$OUTPUT_MAKEFILE"
 rm "$TMP"
 
-iecho "Generated MXE .mk file: $OUTPUT_FILE"
+iecho "Generated MXE .mk file: $OUTPUT_MAKEFILE"
 
 # =============================================
 # Generate test file
@@ -331,11 +334,13 @@ fi
 # =============================================
 # Copy generated files to MXE_ROOT/src with overwrite prompt
 # =============================================
-overwrite_confirmed=false
-
-FILES=("$OUTPUT_FILE")
-
 echo
+overwrite_confirmed=false
+FILES=()
+
+if [[ "$GENERATE_MXE_MAKEFILE" == true ]]; then
+    FILES+=("$OUTPUT_MAKEFILE")
+fi
 
 if [[ "$GENERATE_MXE_TESTFILE" == true ]]; then
     FILES+=("$TEST_FILE")
