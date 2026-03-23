@@ -47,7 +47,7 @@ while [[ $# -gt 0 ]]; do
         -v|--verbose) export VERBOSE=true ;;
         --debug) export DEBUG=true ;;
         --generate-mxe-makefile=*)
-            GENERATE_MXE_MAKEFILE=true
+            export GENERATE_MXE_MAKEFILE=true
             MXE_ARGS="${1#*=}"
             ;;
         --generate-mxe-makefile)
