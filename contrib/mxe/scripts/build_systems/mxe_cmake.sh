@@ -8,6 +8,15 @@ source "$(dirname "$0")/build_systems/mxe_common.sh"
 # To be sourced by generate_mxe_mk.sh
 # =============================================
 
+CMAKE="$(command -v cmake)"
+SOURCE_DIR=$SOURCE_ROOT
+BUILD_DIR="$SOURCE_DIR/build"
+
+decho "Cmake Source folder: $SOURCE_DIR"
+decho "CMake build folder: $BUILD_DIR"
+
+vecho "Using CMake: $CMAKE"
+
 mxe_query_build() {
     TMP_BUILD_DIR="$SOURCE_ROOT/build"
     decho "CMake build folder: $TMP_BUILD_DIR"

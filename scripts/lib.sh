@@ -167,17 +167,26 @@ _msg() {
     shift 2
 
     local no_prefix=false
-    if [[ "$1" == "--no-prefix" ]]; then
-        no_prefix=true
-        shift
-    fi
+    [[ "$1" == "--no-prefix" ]] && { no_prefix=true; shift; }
 
-    # Decide output stream
-    local out=2  # default stderr
-    [[ "$var_name" == "INFO" ]] && out=1   # INFO goes to stdout
+    local out=2
+    [[ "$var_name" == "INFO" ]] && out=1
 
-    # Check if message should print
-    if [[ "$var_name" == "ALWAYS" ]] || [[ "${!var_name}" == true ]] || [[ "$var_name" == "INFO" ]]; then
+    local should_print=false
+
+    case "$var_name" in
+        ALWAYS|INFO)
+            should_print=true
+            ;;
+        DEBUG)
+            [[ "$DEBUG" == "true" ]] && should_print=true
+            ;;
+        VERBOSE)
+            [[ "$VERBOSE" == "true" || "$DEBUG" == "true" ]] && should_print=true
+            ;;
+    esac
+
+    if [[ "$should_print" == true ]]; then
         if [[ "$no_prefix" == true ]]; then
             echo "$*" >&$out
         else

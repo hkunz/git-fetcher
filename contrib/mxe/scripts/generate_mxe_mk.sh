@@ -134,7 +134,7 @@ else
 fi
 
 TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)  # Detect top-level folder (source root)
-SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
+export SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
 
 # =============================================
 # Query for build options (e.g. CMake vars)
@@ -230,7 +230,9 @@ else
     vecho "PC file exists and is not empty: $PC_FILE"
     DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
     DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
-    PC_FILE_NAME=$(basename "$PC_FILE" .pc)
+    PC_FILE_NAME=$(basename "$PC_FILE")
+    PC_FILE_NAME="${PC_FILE_NAME%.pc.in}"
+    PC_FILE_NAME="${PC_FILE_NAME%.pc}"
 fi
 
 TAG_PREFIX="${TAG%%[0-9]*}"
