@@ -85,24 +85,54 @@ query_build_options() {
 query_dependencies() {
     local files=("$@")
     local dep_list=()
-    num_files=${#files[@]}
+    local internal_targets=()
+
     decho "Query CMake dependencies ..."
-    iecho "Parsing $num_files CMake files for dependencies..."
+    iecho "Parsing ${#files[@]} CMake files for dependencies..."
 
     for file in "${files[@]}"; do
         [[ -z "$file" || ! -f "$file" ]] && continue
 
-        # Use grep + perl regex to extract the first argument of find_package/find_dependency
-        while IFS= read -r dep; do
+        # Collapse the file: remove newlines inside parentheses to handle multi-line commands
+        local content
+        content=$(awk '
+            BEGIN {RS=""; ORS="\n"} 
+            {gsub(/\r/,""); gsub(/\n[ \t]*/," "); print}
+        ' "$file")
+
+        # 1) Record internal targets (add_library/add_executable)
+        while read -r t; do
+            internal_targets+=("$t")
+        done < <(echo "$content" \
+            | grep -ioE '(add_library|add_executable)[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
+            | sed -E 's/(add_library|add_executable)[[:space:]]*\([[:space:]]*//I')
+
+        # 2) Extract find_package/find_dependency
+        while read -r dep; do
             dep_list+=("$dep")
-        done < <(grep -i 'find_\(package\|dependency\)' "$file" | \
-                 sed -E 's/^[[:space:]]*find_(package|dependency)[[:space:]]*\([[:space:]]*([^ )]+).*/\2/I')
+        done < <(echo "$content" \
+            | grep -ioE 'find_(package|dependency)[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
+            | sed -E 's/find_(package|dependency)[[:space:]]*\([[:space:]]*//I')
+
+        # 3) Extract target_link_libraries but ignore internal targets
+        while read -r lib; do
+            # Only consider libraries not in internal_targets
+            skip=false
+            for t in "${internal_targets[@]}"; do
+                [[ "$lib" == "$t" ]] && skip=true && break
+            done
+            $skip || dep_list+=("$lib")
+        done < <(echo "$content" \
+            | grep -ioE 'target_link_libraries[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
+            | sed -E 's/target_link_libraries[[:space:]]*\([[:space:]]*//I')
     done
-    # Deduplicate and sort
+
+    # Clean up: remove variables, duplicates, empty lines
     DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sed 's/\${[^}]*}//g' | awk 'NF' | sort -u))
     MXE_DEPENDENCIES=($(alias_to_pkg "${DEPENDENCIES[@]}"))
-    decho "Detected CMake dependencies: ${DEPENDENCIES[*]}"
-    decho "Detected CMake dependencies (alias_to_pkg): ${MXE_DEPENDENCIES[*]}"
+
+    decho "Detected external CMake dependencies: ${DEPENDENCIES[*]}"
+    decho "Detected external CMake dependencies (alias_to_pkg): ${MXE_DEPENDENCIES[*]}"
 }
 
 mxe_generate_pc_file_vars() {
