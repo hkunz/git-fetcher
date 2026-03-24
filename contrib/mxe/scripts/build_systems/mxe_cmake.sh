@@ -140,16 +140,26 @@ query_dependencies() {
 
     # Clean up: remove variables, duplicates, empty lines
     DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sed 's/\${[^}]*}//g' | awk 'NF' | sort -u))
+    IGNORE_DEPENDENCIES=(doxygen sphinx)
 
+    # Remove any dependencies that correspond to source files in the project
     final_deps=()
     for dep in "${DEPENDENCIES[@]}"; do
-        # Look for source files in the project directory
-        if ! find "$SOURCE_ROOT" -type f \( -iname "${dep}.cpp" -o -iname "${dep}.c" -o -iname "${dep}.cc" \) | grep -q .; then
-            final_deps+=("$dep")
+        # Skip if dependency corresponds to a source file
+        if find "$SOURCE_ROOT" -type f \( -iname "${dep}.cpp" -o -iname "${dep}.c" -o -iname "${dep}.cc" \) | grep -q .; then
+            continue
         fi
+
+        # Skip if dependency is in the ignore list (case-insensitive)
+        skip=false
+        for ignore in "${IGNORE_DEPENDENCIES[@]}"; do
+            [[ "${dep,,}" == "${ignore,,}" ]] && skip=true && break
+        done
+        $skip && continue
+
+        final_deps+=("$dep")
     done
     DEPENDENCIES=("${final_deps[@]}")
-
     MXE_DEPENDENCIES=($(alias_to_pkg "${DEPENDENCIES[@]}"))
 
     decho "Detected external CMake dependencies: ${DEPENDENCIES[*]}"
