@@ -85,7 +85,7 @@ query_build_options() {
 query_dependencies() {
     local files=("$@")
     local dep_list=()
-    local internal_targets=()
+    local internal_targets_with_sources=()
 
     decho "Query CMake dependencies ..."
     iecho "Parsing ${#files[@]} CMake files for dependencies..."
@@ -93,37 +93,37 @@ query_dependencies() {
     for file in "${files[@]}"; do
         [[ -z "$file" || ! -f "$file" ]] && continue
 
-        # Collapse the file: remove newlines inside parentheses to handle multi-line commands
+        # Collapse multi-line commands to a single line
         local content
-        content=$(awk '
-            BEGIN {RS=""; ORS="\n"} 
-            {gsub(/\r/,""); gsub(/\n[ \t]*/," "); print}
-        ' "$file")
+        content=$(awk 'BEGIN {RS=""; ORS="\n"} {gsub(/\r/,""); gsub(/\n[ \t]*/," "); print}' "$file")
 
-        # 1) Record internal targets (add_library/add_executable)
+        # 1) Detect internal targets that contain source files (.c, .cpp, .cc)
         while read -r t; do
-            internal_targets+=("$t")
+            # Extract everything inside parentheses
+            line=$(echo "$content" | grep -ioE "(add_library|add_executable|add_.*_plugin)[[:space:]]*\([[:space:]]*$t[^\)]*\)")
+            if [[ $line =~ \.c(pp)?|\.cc ]]; then
+                internal_targets_with_sources+=("$t")
+            fi
         done < <(echo "$content" \
-            | grep -ioE '(add_library|add_executable)[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
-            | sed -E 's/(add_library|add_executable)[[:space:]]*\([[:space:]]*//I')
+            | grep -ioE '(add_library|add_executable|add_.*_plugin)[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
+            | sed -E 's/(add_library|add_executable|add_.*_plugin)[[:space:]]*\([[:space:]]*//I')
 
         # 2) Extract find_package/find_dependency
         while read -r dep; do
             dep_list+=("$dep")
         done < <(echo "$content" \
-            | grep -ioE 'find_(package|dependency)[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
+            | grep -ioE 'find_(package|dependency)[[:space:]]*\([[:space:]]*([A-Za-z0-9_:]+)' \
             | sed -E 's/find_(package|dependency)[[:space:]]*\([[:space:]]*//I')
 
-        # 3) Extract target_link_libraries but ignore internal targets
+        # 3) Extract target_link_libraries but skip internal targets with sources
         while read -r lib; do
-            # Only consider libraries not in internal_targets
-            skip=false
-            for t in "${internal_targets[@]}"; do
+            local skip=false
+            for t in "${internal_targets_with_sources[@]}"; do
                 [[ "$lib" == "$t" ]] && skip=true && break
             done
             $skip || dep_list+=("$lib")
         done < <(echo "$content" \
-            | grep -ioE 'target_link_libraries[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
+            | grep -ioE 'target_link_libraries[[:space:]]*\([[:space:]]*([A-Za-z0-9_:]+)' \
             | sed -E 's/target_link_libraries[[:space:]]*\([[:space:]]*//I')
     done
 
