@@ -18,9 +18,8 @@ decho "CMake build folder: $BUILD_DIR"
 vecho "Using CMake: $CMAKE"
 
 mxe_query_build() {
-    TMP_BUILD_DIR="$SOURCE_ROOT/build"
-    decho "CMake build folder: $TMP_BUILD_DIR"
-    query_build_options "$SOURCE_ROOT" "$TMP_BUILD_DIR"
+
+    query_build_options
 
     # Collect files to parse for dependencies
     FILES_TO_PARSE=()
@@ -39,44 +38,56 @@ mxe_query_build() {
 }
 
 # =============================================
-# Query CMake for all real options
+# Query CMake for project-relevant options (generic)
 # =============================================
 query_build_options() {
-    local src_dir="$1"
-    local build_dir="$2"
+    local include_strings="${1:-false}"  # pass 'true' to include STRING/PATH/FILEPATH options
 
-    check_cmake_version "$src_dir"
+    mkdir -p "$BUILD_DIR"
+    cd "$BUILD_DIR" || return 1
 
-    mkdir -p "$build_dir"
-    cd "$build_dir" || return 1
+    decho "Querying CMake project options in $BUILD_DIR ..."
 
-    decho "Query CMake build options ..."
+    # Configure once to populate the cache
+    cmake "$SOURCE_DIR" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null 2>&1 || true
 
-    if [[ "$DEBUG" == true ]]; then  # Configure to populate cache
-        cmake "$src_dir" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON || true
-    else
-        cmake "$src_dir" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON > /dev/null 2>&1 || true
-    fi
-    # Only user-configurable options: BOOL and project-specific STRING/PATH
-    if [[ "$DEBUG" == true ]]; then
-        mapfile -t BUILD_OPTIONS < <(
-            cmake -LAH "$build_dir" \
-            | grep -E '^[A-Z0-9_]+:BOOL=' \
+    # -------------------------
+    # 1) Extract BOOL options
+    # -------------------------
+    # Ignore built-in CMake/CPACK variables
+    mapfile -t BUILD_OPTIONS_BOOL < <(
+        cmake -LAH "$BUILD_DIR" 2>/dev/null \
+        | grep -E '^[A-Z0-9_]+:BOOL=' \
+        | grep -vE '^(CMAKE_|CPACK_)' \
+        | sed 's/:.*=/=/'
+    )
+
+    # -------------------------
+    # 2) Optionally extract STRING/PATH/FILEPATH options
+    # -------------------------
+    BUILD_OPTIONS_STR=()
+    if [[ "$include_strings" == "true" ]]; then
+        mapfile -t BUILD_OPTIONS_STR < <(
+            cmake -LAH "$BUILD_DIR" 2>/dev/null \
+            | grep -E '^[A-Z0-9_]+:(STRING|PATH|FILEPATH)=' \
+            | grep -vE '^(CMAKE_|CPACK_)' \
             | sed 's/:.*=/=/'
         )
-    else
-        mapfile -t BUILD_OPTIONS < <(
-            cmake -LAH "$build_dir" 2>/dev/null \
-            | grep -E '^[A-Z0-9_]+:BOOL=' \
-            | sed 's/:.*=/=/'
-        )
     fi
-    BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | sort -u))  # Deduplicate
-    decho "MXE-relevant CMake options in $build_dir"
+
+    # -------------------------
+    # 3) Combine, remove blanks, deduplicate
+    # -------------------------
+    BUILD_OPTIONS=("${BUILD_OPTIONS_BOOL[@]}" "${BUILD_OPTIONS_STR[@]}")
+    BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | awk -F= '$2!=""' | sort -u))
+
+    # -------------------------
+    # 4) Debug output
+    # -------------------------
+    decho "MXE-relevant CMake options in $BUILD_DIR:"
     for opt in "${BUILD_OPTIONS[@]}"; do
         decho --no-prefix "  $opt"
     done
-    decho --no-prefix "}"
 }
 
 # =============================================
@@ -223,8 +234,7 @@ mxe_generate_pc_file_vars() {
 }
 
 check_cmake_version() {
-    local src_dir="$1"
-    local required=$(grep -i 'CMAKE_MINIMUM_REQUIRED' "$src_dir/CMakeLists.txt" | head -n1 | sed -E 's/.*VERSION[[:space:]]+([0-9]+\.[0-9]+).*/\1/I')
+    local required=$(grep -i 'CMAKE_MINIMUM_REQUIRED' "$SOURCE_DIR/CMakeLists.txt" | head -n1 | sed -E 's/.*VERSION[[:space:]]+([0-9]+\.[0-9]+).*/\1/I')
     if [[ -n "$required" ]]; then
         local current=$(cmake --version | head -n1 | awk '{print $3}')
         # Simple comparison: convert versions to zero-padded numbers for numeric comparison
