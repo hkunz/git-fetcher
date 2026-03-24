@@ -161,7 +161,6 @@ mxe_generate_pc_file_vars() {
         decho "Detected PC_FILE=$PC_FILE"
     else
         decho "No MXE tmp build dir found, fallback to $PREFIX/$TARGET/lib/"
-        shopt -s nullglob
         for lib in "$PREFIX/$TARGET/lib/"*.a "$PREFIX/$TARGET/lib/"*.so; do
             [[ -f "$lib" ]] || continue
             libname=$(basename "$lib")
@@ -169,7 +168,6 @@ mxe_generate_pc_file_vars() {
             libname=${libname%%.*}
             LIBS+=("-l$libname")
         done
-        shopt -u nullglob
     fi
 
     LIBS="${LIBS[*]}"

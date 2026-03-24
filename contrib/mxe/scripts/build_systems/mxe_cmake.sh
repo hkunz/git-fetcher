@@ -193,18 +193,21 @@ mxe_generate_pc_file_vars() {
         decho "Detected PC_FILE=$PC_FILE"
     else
         decho "No MXE tmp build dir found, fallback to $PREFIX/$TARGET/lib/"
-        shopt -s nullglob
-        files=("$PREFIX/$TARGET/lib/"*.a "$PREFIX/$TARGET/lib/"*.so)
+        files=()
+        for lib in "$PREFIX/$TARGET/lib/"*.a "$PREFIX/$TARGET/lib/"*.so; do
+            [[ -f "$lib" ]] || continue   # skip non-existent matches
+            files+=("$lib")
+        done
+
         decho "Found files in fallback lib dir: ${#files[@]}"
+
         for lib in "${files[@]}"; do
-            [[ -f "$lib" ]] || continue
             libname=$(basename "$lib")
             libname=${libname#lib}
             libname=${libname%%.*}
             LIBS+=("-l$libname")
             decho "Adding fallback library: $libname"
         done
-        shopt -u nullglob
     fi
 
     LIBS="${LIBS[*]}"

@@ -106,9 +106,7 @@ download_archive() {
         name="${name%.txz}"
 
         mkdir "$tmpdir/$name"
-        shopt -s dotglob
-        mv "$tmpdir"/* "$tmpdir/$name" 2>/dev/null || true
-
+        mv "$tmpdir"/{.,}* "$tmpdir/$name" 2>/dev/null || true
         tar -c${tflag}f "$file" -C "$tmpdir" "$name"
         rm -rf "$tmpdir"
     fi
