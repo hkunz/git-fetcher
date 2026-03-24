@@ -2,7 +2,7 @@
 # mxe_common.sh
 
 MXE_ALIASES_JSON="$(dirname "$0")/../mappings/mxe-aliases.json"
-HOST_TOOLS=("python" "cmake" "meson" "ninja" "pkg-config")
+HOST_TOOLS=(python cmake meson ninja pkg-config doxygen sphinx git perl pythoninterp wxwidgets)
 
 alias_to_pkg() {
     local input_array=("$@")

@@ -140,7 +140,6 @@ query_dependencies() {
 
     # Clean up: remove variables, duplicates, empty lines
     DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sed 's/\${[^}]*}//g' | awk 'NF' | sort -u))
-    IGNORE_DEPENDENCIES=(doxygen sphinx)
 
     # Remove any dependencies that correspond to source files in the project
     final_deps=()
@@ -149,14 +148,14 @@ query_dependencies() {
         if find "$SOURCE_ROOT" -type f \( -iname "${dep}.cpp" -o -iname "${dep}.c" -o -iname "${dep}.cc" \) | grep -q .; then
             continue
         fi
-
-        # Skip if dependency is in the ignore list (case-insensitive)
         skip=false
-        for ignore in "${IGNORE_DEPENDENCIES[@]}"; do
-            [[ "${dep,,}" == "${ignore,,}" ]] && skip=true && break
-        done
-        $skip && continue
+        # Skip if dependency contains "test" (case-insensitive)
+        [[ "${dep,,}" == *test* ]] && skip=true
 
+        # Skip if it contains the project name (internal targets)
+        [[ "${dep,,}" == *"${PACKAGE_NAME,,}"* ]] && skip=true
+
+        $skip && continue
         final_deps+=("$dep")
     done
     DEPENDENCIES=("${final_deps[@]}")
