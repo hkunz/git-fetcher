@@ -1,4 +1,5 @@
 {
+  "pkgconfig": "pkgconf",
   "a52": "a52dec",
   "liba52": "a52dec",
   "abseil": "absl",
