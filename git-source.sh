@@ -83,6 +83,7 @@ done
 # =============================================
 HOST=""
 OWNER_REPO=""
+PKG_NAME=""
 GIT_URL=""
 
 for domain in $(get_known_domains); do
@@ -106,6 +107,8 @@ fi
 vecho "Detected host: $HOST"
 vecho "Repository (owner/name): $OWNER_REPO"
 vecho "Git URL: $GIT_URL"
+PKG_NAME="${OWNER_REPO##*/}"
+vecho "Package name: $PKG_NAME"
 
 # =============================================
 # List branches/tags if requested
