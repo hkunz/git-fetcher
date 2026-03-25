@@ -4,9 +4,6 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 SCRIPT_DIR="$ROOT_DIR/scripts"
 
-export VERSION="undefined"  # if possible, is the numeric normalized version in X.Y.Z format
-export ARCHIVE_VERSION="undefined"  # is the full version after the package name of a tarball name after the - packagen-archiveversion.tar.gz
-
 source "$ROOT_DIR/hosts/common.sh"
 source "$SCRIPT_DIR/lib.sh"
 source "$SCRIPT_DIR/lib-db.sh"
@@ -21,6 +18,8 @@ GENERATE_MXE_TESTFILE=false
 FORCE_DOWNLOAD=false
 GH_MODE="tags"
 INPUT=""
+VERSION="undefined"  # if possible, is the numeric normalized version in X.Y.Z format
+ARCHIVE_VERSION="undefined"  # is the full version after the package name of a tarball name after the - packagen-archiveversion.tar.gz
 
 
 # =============================================

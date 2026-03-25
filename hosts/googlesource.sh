@@ -34,16 +34,38 @@ resolve_archive() {
     local repo_path="${repo_url#https://}"
     repo_path="${repo_path#http://}"
 
-    ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo_path" "$final_ref")
+    ARCHIVE_URL=$(construct_archive_url_googlesource "$HOST" "$repo_path" "$final_ref")
     set_archive_info "$repo_path" "$final_ref" ""
     DESCRIPTION="GoogleSource doesn’t provide a description via HTTP API"
 
-    iecho
-    iecho "Note: GoogleSource generates tarballs dynamically."
-    iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
-    iecho
+    #iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
+    #iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
 
     summarize_archive
+}
+
+get_tarname() {
+    local package="$1"
+    local version="$2"
+
+    curl -s "https://storage.googleapis.com/${package}-releases/" \
+    | grep -oE "<Key>[^<]*${version}\.tar\.gz</Key>" \
+    | grep -v '\.asc' \
+    | sed -E 's#<Key>(.*)</Key>#\1#' \
+    | head -n1
+}
+
+construct_archive_url_googlesource() {
+    local tarname=$(get_tarname "$PACKAGE_NAME" "$VERSION")
+
+    decho "Package name: '$PACKAGE_NAME' with archive version '$ARCHIVE_VERSION'"
+    decho "Downloading tarball: $tarname"
+
+    if [[ -n "$tarname" ]]; then
+        echo "https://storage.googleapis.com/${PACKAGE_NAME}-releases/$tarname"
+    else
+        echo "https://$owner_repo/+archive/refs/tags/$version.tar.gz"
+    fi
 }
 
 resolve_specific_ref() {
