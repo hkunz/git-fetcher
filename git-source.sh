@@ -303,6 +303,7 @@ if [[ "$GENERATE_MXE_MAKEFILE" == true || "$GENERATE_MXE_TESTFILE" == true ]]; t
         --mxe_args "$MXE_ARGS" \
         --owner_repo "$OWNER_REPO" \
         --archive "$ARCHIVE_FILE" \
+        --archive_subdir "$ARCHIVE_SUBDIR" \
         --pkg "$PACKAGE_NAME" \
         --tag "$TAG" \
         --version "$VERSION" \

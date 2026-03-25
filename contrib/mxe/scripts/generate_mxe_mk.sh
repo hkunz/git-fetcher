@@ -49,6 +49,7 @@ print_usage() {
     echo "                                If omitted, defaults to 'default' (generate defaults)"
     echo "  --owner_repo <owner/repo>     GitHub owner/repo"
     echo "  --archive <file>              Local archive file"
+    echo "  --archive_subdir <dir>        Local archive file's sub-directory"
     echo "  --pkg <name>                  Package name"
     echo "  --tag <tag>                   Git tag (optional)"
     echo "  --version <version>           Package version"
@@ -71,6 +72,7 @@ while [[ $# -gt 0 ]]; do
         --mxe_args) MXE_ARGS="$2"; shift 2 ;;
         --owner_repo) OWNER_REPO="$2"; shift 2 ;;
         --archive) ARCHIVE_FILE="$2"; shift 2 ;;
+        --archive_subdir) SUBDIR_NAME="$2"; shift 2 ;;
         --pkg) PACKAGE_NAME="$2"; shift 2 ;;
         --tag) TAG="$2"; shift 2 ;;
         --version) VERSION="$2"; shift 2 ;;
@@ -85,7 +87,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Check required variables
-for var in ARCHIVE_FILE PACKAGE_NAME VERSION ARCHIVE_URL CHECKSUM DESCRIPTION GIT_URL; do
+for var in ARCHIVE_FILE SUBDIR_NAME PACKAGE_NAME VERSION ARCHIVE_URL CHECKSUM DESCRIPTION GIT_URL; do
     if [[ -z "${!var}" ]]; then
         echo "Missing required argument: $var"
         print_usage
@@ -200,6 +202,7 @@ TEMPLATE="$GEN_MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_MAKEFILE="$OUTPUT_DIR/$PACKAGE_NAME_MXE.mk"
 MAKE_CMD="MAKE"
 IGNORE=""
+TAR_NAME="$SUBDIR_NAME.tar.gz"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -272,6 +275,8 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${CFLAGS}|$CFLAGS|g" \
 -e "s|\${MAKE_CMD}|$MAKE_CMD|g" \
 -e "s|\${PC_FILE_NAME}|$PC_FILE_NAME|g" \
+-e "s|\${SUBDIR_NAME}|$SUBDIR_NAME|g" \
+-e "s|\${TAR_NAME}|$TAR_NAME|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
 -e "/# BEGIN_NON_GITHUB/d" \
