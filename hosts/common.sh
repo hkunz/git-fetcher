@@ -229,6 +229,32 @@ encode_repo_path_for_api() {
     echo "$encoded"
 }
 
+normalize_version() {
+    # Determine version: Extract version from tag robustly (dots, underscores, or dashes)
+    if [[ -n "$TAG" ]]; then
+        # extract version from tag
+        if [[ "$TAG" =~ ([0-9]+([._-][0-9]+)+) ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            VERSION="${VERSION//[_-]/.}"
+        else
+            VERSION="$TAG"
+        fi
+        ARCHIVE_VERSION="$TAG"
+    elif [[ -n "$BRANCH" ]]; then
+        VERSION="$BRANCH"
+        ARCHIVE_VERSION="$BRANCH"
+    elif [[ -n "$REF_NAME" ]]; then
+        # commit SHA or custom ref → use first 7 chars
+        VERSION="${REF_NAME:0:7}"
+        ARCHIVE_VERSION="$REF_NAME"
+    else
+        VERSION="unknown"
+        ARCHIVE_VERSION="$VERSION"
+    fi
+    decho "Normalized version: $VERSION"
+    decho "Archive version: $ARCHIVE_VERSION"
+}
+
 # Decide whether to use the latest tag or fallback branch
 resolve_latest_tag_or_branch() {
     local proposed_latest="$1"
@@ -244,6 +270,7 @@ resolve_latest_tag_or_branch() {
         BRANCH="$default_branch"
         wecho "No tags found; falling back to default branch '$BRANCH' for archive download"
     fi
+    normalize_version
 }
 
 detect_ref_type() {
@@ -335,12 +362,15 @@ resolve_specific_ref_generic() {
             fi
             ;;
     esac
+    normalize_version
 }
 
 summarize_archive() {
-    decho "TAG          = '${TAG}'"
-    decho "BRANCH       = '${BRANCH}'"
-    decho "ARCHIVE_URL  = '${ARCHIVE_URL}'"
-    decho "ARCHIVE_FILE = '${ARCHIVE_FILE}'"
-    decho "DESCRIPTION  = '${DESCRIPTION}'"
+    decho "TAG             = '${TAG}'"
+    decho "BRANCH          = '${BRANCH}'"
+    decho "VERSION         = '${VERSION}'"
+    decho "ARCHIVE_VERSION = '${ARCHIVE_VERSION}'"
+    decho "ARCHIVE_URL     = '${ARCHIVE_URL}'"
+    decho "ARCHIVE_FILE    = '${ARCHIVE_FILE}'"
+    decho "DESCRIPTION     = '${DESCRIPTION}'"
 }

@@ -4,6 +4,9 @@ set -e
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 SCRIPT_DIR="$ROOT_DIR/scripts"
 
+export VERSION="undefined"  # if possible, is the numeric normalized version in X.Y.Z format
+export ARCHIVE_VERSION="undefined"  # is the full version after the package name of a tarball name after the - packagen-archiveversion.tar.gz
+
 source "$ROOT_DIR/hosts/common.sh"
 source "$SCRIPT_DIR/lib.sh"
 source "$SCRIPT_DIR/lib-db.sh"
@@ -18,6 +21,7 @@ GENERATE_MXE_TESTFILE=false
 FORCE_DOWNLOAD=false
 GH_MODE="tags"
 INPUT=""
+
 
 # =============================================
 # Usage function
@@ -228,6 +232,7 @@ download_archive_if_needed() {
 # =============================================
 ARCHIVE_FILE_DB=$(get_entry_field '.archive')
 load_from_db
+normalize_version
 ARCHIVE_FILE_DB="$ARCHIVE_FILE"
 
 if should_redownload; then
@@ -259,30 +264,12 @@ iecho "Downloaded file: $(bold_bright_cyan "$ARCHIVE_NAME")"
 iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
 [ -n "$DESCRIPTION" ] && iecho "Package description: $([[ "$DEBUG" = true ]] && echo "$DESCRIPTION" || echo "${DESCRIPTION:0:40}...")"
 
-# Determine version: Extract version from tag robustly (dots, underscores, or dashes)
-if [[ -n "$TAG" ]]; then
-    # extract version from tag
-    if [[ "$TAG" =~ ([0-9]+([._-][0-9]+)+) ]]; then
-        VERSION="${BASH_REMATCH[1]}"
-        VERSION="${VERSION//[_-]/.}"
-    else
-        VERSION="$TAG"
-    fi
-elif [[ -n "$BRANCH" ]]; then
-    VERSION="$BRANCH"
-elif [[ -n "$REF_NAME" ]]; then
-    # commit SHA or custom ref → use first 7 chars
-    VERSION="${REF_NAME:0:7}"
-else
-    VERSION="unknown"
-fi
-
 # If description is empty (custom ref, branch, tag, or commit), set placeholder
 if [[ -z "$DESCRIPTION" ]]; then
     DESCRIPTION="No description available when using --ref option"
 fi
 
-iecho "Version: $(bold_bright_cyan "$VERSION")"
+iecho "Version: $(bold_bright_cyan "$VERSION")"  # normalized version to X.Y.Z format
 iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
 iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
 
