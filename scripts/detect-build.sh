@@ -44,6 +44,7 @@ MAIN_CANDIDATE=""
 MIN_DEPTH=999   # Track shallowest depth
 
 while IFS= read -r file; do
+    [[ "$file" == */third_party/* ]] && continue
     case "$file" in
         # Meson
         */meson.build|meson.build)
