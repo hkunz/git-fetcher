@@ -18,8 +18,10 @@ GENERATE_MXE_TESTFILE=false
 FORCE_DOWNLOAD=false
 GH_MODE="tags"
 INPUT=""
-VERSION="undefined"  # if possible, is the numeric normalized version in X.Y.Z format
-ARCHIVE_VERSION="undefined"  # is the full version after the package name of a tarball name after the - packagen-archiveversion.tar.gz
+ARCHIVE_NAME=
+ARCHIVE_SUBDIR=
+VERSION=  # if possible, is the numeric normalized version in X.Y.Z format
+ARCHIVE_VERSION=  # is the full version after the package name of a tarball name after the - packagen-archiveversion.tar.gz
 
 
 # =============================================
@@ -250,6 +252,19 @@ if should_redownload; then
 else
     iecho "Download URL: $ARCHIVE_URL"
     iecho "Using archive from DB: $ARCHIVE_FILE"
+fi
+
+# Detect top-level folder(s) inside the tar
+top_level_dirs=$(tar -tf "$ARCHIVE_FILE" | cut -d/ -f1 | sort -u)
+num_dirs=$(echo "$top_level_dirs" | wc -l)
+
+if [ "$num_dirs" -eq 1 ]; then
+    ARCHIVE_SUBDIR="$top_level_dirs"
+    iecho "Archive subdirectory detected: $ARCHIVE_SUBDIR"
+else
+    eecho "Archive contains $num_dirs top-level entries: $top_level_dirs"
+    eecho "Expected exactly one top-level folder in the tarball. Aborting."
+    exit 1
 fi
 
 # Show tag, branch, or commit
