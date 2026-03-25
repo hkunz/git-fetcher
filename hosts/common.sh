@@ -201,11 +201,8 @@ set_archive_info() {
     fi
 
     readarray -t curl_args < <(curl_header "$HOST")
-
     ARCHIVE_FILE="$(basename "$repo")-${ref}.tar.gz"
-
     DESCRIPTION=$(curl -s "${curl_args[@]}" "$api" | jq -r '.description // empty')
-    DESCRIPTION="${DESCRIPTION:-Custom ref ${ref} (no upstream description)}"
 }
 
 # ==============================
@@ -335,7 +332,6 @@ resolve_specific_ref_generic() {
     local ref_name="$3"
     local commit_url_template="$4"  # optional
 
-    DESCRIPTION="Custom ref ${ref_name:0:7} (no upstream description)"
     vecho "Resolving specific ref: $ref_name"
 
     local ref_type
@@ -363,6 +359,39 @@ resolve_specific_ref_generic() {
             ;;
     esac
     normalize_version
+}
+
+get_description_from_tar() {
+    local archive_file="$1"
+    local first_dir
+    local description=""
+    decho "Parsing description in any README file within $archive_file"
+
+    first_dir=$(tar -tzf "$archive_file" | cut -d/ -f1 | sort -u | head -n1)
+
+    local readme_file
+    for f in README.md README.rst README.txt README; do
+        if tar -tzf "$archive_file" | grep -q "^$first_dir/$f$"; then
+            readme_file="$first_dir/$f"
+            decho "Found file: $readme_file"
+            break
+        fi
+    done
+
+    if [[ -n "$readme_file" ]]; then
+        # Get first line that starts with #
+        description=$(tar -xOzf "$archive_file" "$readme_file" \
+            | grep '^#' \
+            | head -n1 \
+            | sed 's/^#\+ *//'  # remove leading # symbols and spaces
+        )
+        description="${description:-Custom ref ${REF_NAME:-$BRANCH:-$TAG} (no upstream description)}"
+    else
+        decho "No README file found"
+        description="Custom ref ${REF_NAME:-$BRANCH:-$TAG} (no README found)"
+    fi
+
+    echo "$description"
 }
 
 summarize_archive() {

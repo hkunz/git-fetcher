@@ -36,11 +36,8 @@ resolve_archive() {
 
     ARCHIVE_URL=$(construct_archive_url_googlesource "$HOST" "$repo_path" "$final_ref")
     set_archive_info "$repo_path" "$final_ref" ""
-    DESCRIPTION="GoogleSource doesn’t provide a description via HTTP API"
-
     #iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
     #iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
-
     summarize_archive
 }
 

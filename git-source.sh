@@ -219,6 +219,11 @@ download_archive_if_needed() {
     JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
     BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
 
+    if [[ -z "$DESCRIPTION" ]]; then
+        decho "No description available."
+        DESCRIPTION=$(get_description_from_tar "$ARCHIVE_FILE")
+    fi
+
     if [[ -n "$REF_NAME" ]]; then
         update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
     else
@@ -265,7 +270,7 @@ iecho "Package name: $(bold_bright_green "$PACKAGE_NAME")"
 
 # If description is empty (custom ref, branch, tag, or commit), set placeholder
 if [[ -z "$DESCRIPTION" ]]; then
-    DESCRIPTION="No description available when using --ref option"
+    DESCRIPTION="No description available"
 fi
 
 iecho "Version: $(bold_bright_cyan "$VERSION")"  # normalized version to X.Y.Z format
