@@ -88,7 +88,6 @@ done
 # =============================================
 HOST=""
 OWNER_REPO=""
-PKG_NAME=""
 GIT_URL=""
 
 for domain in $(get_known_domains); do
@@ -112,8 +111,8 @@ fi
 vecho "Detected host: $HOST"
 vecho "Repository (owner/name): $OWNER_REPO"
 vecho "Git URL: $GIT_URL"
-PKG_NAME="${OWNER_REPO##*/}"
-vecho "Package name: $PKG_NAME"
+PACKAGE_NAME="${OWNER_REPO##*/}"
+vecho "Package name: $PACKAGE_NAME"
 
 # =============================================
 # List branches/tags if requested
@@ -145,7 +144,6 @@ load_from_db() {
     ARCHIVE_URL=$(get_entry_field '.archive_url')
     ARCHIVE_FILE=$(get_entry_field '.archive')
     ARCHIVE_NAME=$(basename "$ARCHIVE_FILE")
-    PACKAGE_NAME=$(get_entry_field '.package')
     DESCRIPTION=$(get_entry_field '.description')
     TAG=$(get_entry_field '.latest_tag')
     BRANCH=$(get_entry_field '.default_branch')
@@ -213,7 +211,6 @@ download_archive_if_needed() {
     ARCHIVE_VERSION="${TAG:-${BRANCH:-${REF_NAME}}}"
     ARCHIVE_NAME="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_NAME"
-    PACKAGE_NAME="$(basename "$OWNER_REPO")"
 
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
@@ -236,10 +233,15 @@ download_archive_if_needed() {
 # =============================================
 # Load DB and check if we need download
 # =============================================
+TAG=
+BRANCH=
+REF_NAME=
+VERSION=
+ARCHIVE_VERSION=
+
 ARCHIVE_FILE_DB=$(get_entry_field '.archive')
 load_from_db
 normalize_version
-ARCHIVE_FILE_DB="$ARCHIVE_FILE"
 
 if should_redownload; then
     if [[ -n "$REQUESTED_REF_NAME" ]]; then
@@ -247,6 +249,7 @@ if should_redownload; then
     else
         resolve_archive "$OWNER_REPO"
     fi
+    normalize_version
     download_archive_if_needed
     iecho "Downloaded archive: $ARCHIVE_FILE"
 else

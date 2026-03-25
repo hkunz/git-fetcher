@@ -393,13 +393,3 @@ get_description_from_tar() {
 
     echo "$description"
 }
-
-summarize_archive() {
-    decho "TAG             = '${TAG}'"
-    decho "BRANCH          = '${BRANCH}'"
-    decho "VERSION         = '${VERSION}'"
-    decho "ARCHIVE_VERSION = '${ARCHIVE_VERSION}'"
-    decho "ARCHIVE_URL     = '${ARCHIVE_URL}'"
-    decho "ARCHIVE_FILE    = '${ARCHIVE_FILE}'"
-    decho "DESCRIPTION     = '${DESCRIPTION}'"
-}

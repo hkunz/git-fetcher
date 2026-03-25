@@ -32,7 +32,6 @@ resolve_archive() {
     local final_ref="${TAG:-$BRANCH}"
 
     set_archive_info "$owner_repo" "$final_ref" "$api"
-    summarize_archive
 }
 
 resolve_specific_ref() {

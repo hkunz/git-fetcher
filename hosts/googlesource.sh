@@ -38,7 +38,6 @@ resolve_archive() {
     set_archive_info "$repo_path" "$final_ref" ""
     #iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
     #iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
-    summarize_archive
 }
 
 get_tarname() {
