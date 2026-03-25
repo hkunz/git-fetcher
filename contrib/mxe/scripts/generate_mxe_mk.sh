@@ -30,6 +30,7 @@ iecho "Preparing MXE Makefile for the target library..."
 
 ARCHIVE_FILE=""
 PACKAGE_NAME=""
+PACKAGE_NAME_MXE=""
 VERSION=""
 ARCHIVE_URL=""
 CHECKSUM=""
@@ -100,10 +101,11 @@ iecho "======================= MXE Generation ======================="
 decho "Additional MXE args: $MXE_ARGS"
 if [[ "$MXE_ARGS" == "default" || -z "$MXE_ARGS" ]]; then
     iecho "No package name provided; default generation with name $(bold_bright_green "$PACKAGE_NAME")"
+    PACKAGE_NAME_MXE=$PACKAGE_NAME
 else
-    PACKAGE_NAME="${MXE_ARGS%%,*}"  # everything before first comma
-    PACKAGE_NAME="${PACKAGE_NAME%.mk}"
-    iecho "Using package name: $(bold_bright_green "$PACKAGE_NAME")"
+    PACKAGE_NAME_MXE="${MXE_ARGS%%,*}"  # everything before first comma
+    PACKAGE_NAME_MXE="${PACKAGE_NAME_MXE%.mk}"
+    iecho "Using package name: $(bold_bright_green "$PACKAGE_NAME_MXE")"
 fi
 
 # =============================================
@@ -195,7 +197,7 @@ GEN_MXE_ROOT="$ROOT_DIR/contrib/mxe"
 OUTPUT_DIR="$GEN_MXE_ROOT/generated"
 TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
 TEMPLATE="$GEN_MXE_ROOT/templates/mxe-template.mk"
-OUTPUT_MAKEFILE="$OUTPUT_DIR/$PACKAGE_NAME.mk"
+OUTPUT_MAKEFILE="$OUTPUT_DIR/$PACKAGE_NAME_MXE.mk"
 MAKE_CMD="MAKE"
 IGNORE=""
 
@@ -253,7 +255,7 @@ ${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
 -e "s|\${GH_MODE}|$GH_MODE|g" \
 -e "s|\${ARCHIVE_FORMAT}|$ARCHIVE_FORMAT|g" \
--e "s|\${PACKAGE}|$PACKAGE_NAME|g" \
+-e "s|\${PACKAGE}|$PACKAGE_NAME_MXE|g" \
 -e "s|\${WEBSITE}|$GIT_URL|g" \
 -e "s|\${VERSION}|$VERSION|g" \
 -e "s|\${DESCRIPTION}|$DESCRIPTION|g" \
