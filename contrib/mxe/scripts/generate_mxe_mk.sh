@@ -202,7 +202,6 @@ TEMPLATE="$GEN_MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_MAKEFILE="$OUTPUT_DIR/$PACKAGE_NAME_MXE.mk"
 MAKE_CMD="MAKE"
 IGNORE=""
-TAR_NAME="$SUBDIR_NAME.tar.gz"
 
 mkdir -p "$OUTPUT_DIR"
 
@@ -249,6 +248,23 @@ fi
 iecho "---------------------------------------------------------------"
 
 GH_MODE="tags"  # Always use tags; even branches like master/main are handled as tags, because releases may contain binaries instead of source
+
+# make nice: reduce redundancy in URL, SUBDIR, FILE parts for URL downloads by replacing with $($(PKG)_VERSION)
+TAR_ARCHIVE_FILENAME="${ARCHIVE_URL##*/}"  # "filename-version.tar.gz"
+TAR_ARCHIVE_FILENAME="${TAR_ARCHIVE_FILENAME%.tar.gz}"  # "filename-version"
+
+if [ "$PACKAGE_NAME-$VERSION" == "$TAR_ARCHIVE_FILENAME" ] && [ "$SUBDIR_NAME" == "$PACKAGE_NAME-$VERSION" ]; then
+    SUBDIR_NAME='\$(PKG)-\$($(PKG)_VERSION)'
+    ARCHIVE_URL="${ARCHIVE_URL%/*}/$SUBDIR_NAME.tar.gz"
+else
+    # Only replace version part if it exists
+    if [[ "$SUBDIR_NAME" == *"$VERSION"* ]]; then
+        LITERAL_VERSION='$($(PKG)_VERSION)'      # literal string for Makefile
+        SUBDIR_NAME="${SUBDIR_NAME//$VERSION/$LITERAL_VERSION}"
+        ARCHIVE_URL="${ARCHIVE_URL%/*}/$SUBDIR_NAME.tar.gz"
+    fi
+fi
+TAR_NAME="$SUBDIR_NAME.tar.gz"
 
 sed \
 ${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
