@@ -38,8 +38,8 @@ ${BUILD_OPTIONS_MULTILINE}
 # END_MESON
 # BEGIN_OTHER_BUILD_SYSTEM
 	# Configure package
-	cd "$(BUILD_DIR)" && \
-	"$(SOURCE_DIR)/configure" $(MXE_CONFIGURE_OPTS) \
+	cd "$(BUILD_DIR)" && "$(SOURCE_DIR)/configure" \
+		$(MXE_CONFIGURE_OPTS) \
 		--host="$(TARGET)" \
 		--prefix="$(PREFIX)/$(TARGET)"
 # END_OTHER_BUILD_SYSTEM
