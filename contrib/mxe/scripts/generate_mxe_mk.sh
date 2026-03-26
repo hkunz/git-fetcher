@@ -148,7 +148,7 @@ export SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
 BUILD_SYSTEM_LOWER=$(echo "$BUILD_SYSTEM" | tr '[:upper:]' '[:lower:]')
 BUILD_SYSTEM_FILE="$MXE_SCRIPT_DIR/build_systems/mxe_${BUILD_SYSTEM_LOWER}.sh"
 
-is_pc_missing() {
+is_pc_missing_in_src() {
     if [[ -z "$PC_FILE" ]]; then
         return 0  # missing
     fi
@@ -165,7 +165,7 @@ MXE_DEPENDENCIES=()
 if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
     source "$BUILD_SYSTEM_FILE"
     mxe_query_build
-    if is_pc_missing; then
+    if is_pc_missing_in_src; then
         decho "Missing .pc file at '$TMP_DIR/$PC_FILE'. Generating fallback pkg-config variables..."
         mxe_generate_pc_file_vars
     fi
@@ -230,19 +230,13 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
-if is_pc_missing; then
-    PC_FILE_NAME='\$(PKG)'
-else
-    vecho "PC file exists and is not empty: $PC_FILE"
-    DELETE_PC_BLOCK='/^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
-    DELETE_INCLUDE_BLOCK='/^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
-    PC_FILE_NAME=$(basename "$PC_FILE")
-    PC_FILE_NAME="${PC_FILE_NAME%.pc.in}"
-    PC_FILE_NAME="${PC_FILE_NAME%.pc}"
-fi
-
 export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 
+# =============================================
+# When this script is run again after MXE's `make <package>`, it checks whether
+# a .pc file was generated in usr/<target>/lib/pkgconfig/.
+# =============================================
+IS_PC_GENERATED=false
 if [[ -n "$MXE_ROOT" ]]; then
     PKGCONFIG_DIR="$MXE_ROOT/usr/$TARGET/lib/pkgconfig"
     mapfile -t pc_files < <(
@@ -262,10 +256,23 @@ if [[ -n "$MXE_ROOT" ]]; then
             decho "--  $pc"
         done
         decho "Current .pc name: '$PC_FILE_NAME'"
+        PC_FILE="${real_pc_files[0]}"
         PC_FILE_NAME="$(basename "${real_pc_files[0]}")"
         PC_FILE_NAME="${PC_FILE_NAME%.pc}"
         decho "Replace .pc name: '$PC_FILE_NAME'"
+        IS_PC_GENERATED=true
     fi
+fi
+
+if is_pc_missing_in_src && [[ "$IS_PC_GENERATED" != true ]]; then
+    PC_FILE_NAME='\$(PKG)'
+else
+    vecho "PC file exists and is not empty: $PC_FILE"
+    DELETE_PC_BLOCK='/^$/ { N; /^[[:space:]]*\n[[:space:]]*# BEGIN_PC_FILE$/ { N; /# END_PC_FILE/d } } ; /^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
+    DELETE_INCLUDE_BLOCK='/^$/ { N; /^[[:space:]]*\n[[:space:]]*# BEGIN_INCLUDE$/ { N; /# END_INCLUDE/d } } ; /^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
+    PC_FILE_NAME=$(basename "$PC_FILE")
+    PC_FILE_NAME="${PC_FILE_NAME%.pc.in}"
+    PC_FILE_NAME="${PC_FILE_NAME%.pc}"
 fi
 
 TAG_PREFIX="${TAG%%[0-9]*}"
@@ -283,7 +290,7 @@ sed \
 ${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
 ${DELETE_BUILD:+-e "$DELETE_BUILD"} \
 ${DELETE_PC_BLOCK:+-e "$DELETE_PC_BLOCK"} \
-${DELETE_PC_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
+${DELETE_INCLUDE_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
 -e "s|\${GH_MODE}|$GH_MODE|g" \
 -e "s|\${ARCHIVE_FORMAT}|$ARCHIVE_FORMAT|g" \
@@ -335,12 +342,10 @@ rm "$TMP"
 ESC_VERSION="${VERSION//./\\.}"
 ESC_PACKAGE="${PACKAGE_NAME_MXE//./\\.}"
 # reduce hardcoded redundancy for package name and version
-for line in _URL _SUBDIR _FILE; do
-    sed -i "/^\$(PKG)$line/{
-        s|$ESC_PACKAGE|\\\$(PKG)|g
-        s|$ESC_VERSION|\\\$\\(\$(PKG)_VERSION\\)|g
-    }" "$OUTPUT_MAKEFILE"
-done
+sed -i "/_URL\|_SUBDIR\|_FILE\|pkg-config/{
+    s|$ESC_PACKAGE|\\\$(PKG)|g
+    s|$ESC_VERSION|\\\$\\(\$(PKG)_VERSION\\)|g
+}" "$OUTPUT_MAKEFILE"
 
 iecho "Generated MXE .mk file: $OUTPUT_MAKEFILE"
 
@@ -370,7 +375,7 @@ fi
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
 
-if is_pc_missing && [ "$BUILD_SYSTEM_SUPPORT" = true ]; then
+if is_pc_missing_in_src && [ "$BUILD_SYSTEM_SUPPORT" = true ]; then
     echo
     echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME.mk' may have incomplete variables for GENERATE_PC,"
     echo "       or even the package may dynamically generate a .pc file after building,"
