@@ -321,7 +321,7 @@ iecho "Generated MXE .mk file: $OUTPUT_MAKEFILE"
 # Generate test file
 # =============================================
 TEST_TEMPLATE="$GEN_MXE_ROOT/templates/test.lang.template"
-TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME}-test.$TEST_LANG"
+TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME_MXE}-test.$TEST_LANG"
 
 export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 export TEST_LANG
