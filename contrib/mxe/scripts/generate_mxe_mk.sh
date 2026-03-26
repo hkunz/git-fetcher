@@ -57,6 +57,7 @@ print_usage() {
     echo "  --checksum <sha256>           SHA256 checksum of archive"
     echo "  --description <desc>          Package description"
     echo "  --website <url>               Package website"
+    echo "  --language <lang>             Primary language used in package"
     echo "  --debug                       Enable debug output"
     echo "  -h, --help                    Show this help message"
     echo
@@ -80,6 +81,7 @@ while [[ $# -gt 0 ]]; do
         --checksum) CHECKSUM="$2"; shift 2 ;;
         --description) DESCRIPTION="$2"; shift 2 ;;
         --website) GIT_URL="$2"; shift 2 ;;
+        --language) LANGUAGE="$2"; shift 2 ;;
         --debug) DEBUG=true; shift ;;
         -h|--help) print_usage; exit 0 ;;
         *) echo "Unknown option: $1"; print_usage; exit 1 ;;
@@ -197,7 +199,7 @@ fi
 # =============================================
 GEN_MXE_ROOT="$ROOT_DIR/contrib/mxe"
 OUTPUT_DIR="$GEN_MXE_ROOT/generated"
-TEST_LANG="${TEST_LANG:-cpp}"  # default to cpp if not set
+TEST_LANG=$([ "$LANGUAGE" = "C" ] && echo "c" || echo "cpp")
 TEMPLATE="$GEN_MXE_ROOT/templates/mxe-template.mk"
 OUTPUT_MAKEFILE="$OUTPUT_DIR/$PACKAGE_NAME_MXE.mk"
 MAKE_CMD="MAKE"

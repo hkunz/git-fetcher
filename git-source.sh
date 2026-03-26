@@ -314,6 +314,7 @@ if [[ "$GENERATE_MXE_MAKEFILE" == true || "$GENERATE_MXE_TESTFILE" == true ]]; t
         --checksum "$CHECKSUM" \
         --description "$DESCRIPTION" \
         --website "$GIT_URL" \
+        --language "$LANGUAGE" \
         $( [[ "$DEBUG" == true ]] && echo --debug )
 fi
 
