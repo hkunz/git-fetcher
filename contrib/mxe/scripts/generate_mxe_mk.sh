@@ -241,6 +241,33 @@ else
     PC_FILE_NAME="${PC_FILE_NAME%.pc}"
 fi
 
+export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
+
+if [[ -n "$MXE_ROOT" ]]; then
+    PKGCONFIG_DIR="$MXE_ROOT/usr/$TARGET/lib/pkgconfig"
+    mapfile -t pc_files < <(
+        find "$PKGCONFIG_DIR" -iname "*.pc" \
+            | grep -i "$PACKAGE_NAME_MXE"
+    )
+    # Filter out MXE auto-generated files
+    real_pc_files=()
+    for pc in "${pc_files[@]}"; do
+        if ! head -n1 "$pc" | grep -q "MXE"; then
+            real_pc_files+=("$pc")
+        fi
+    done
+    if [[ ${#real_pc_files[@]} -gt 0 ]]; then
+        decho "Detected possible .pc files for '$PACKAGE_NAME_MXE':"
+        for pc in "${real_pc_files[@]}"; do
+            decho "--  $pc"
+        done
+        decho "Current .pc name: '$PC_FILE_NAME'"
+        PC_FILE_NAME="$(basename "${real_pc_files[0]}")"
+        PC_FILE_NAME="${PC_FILE_NAME%.pc}"
+        decho "Replace .pc name: '$PC_FILE_NAME'"
+    fi
+fi
+
 TAG_PREFIX="${TAG%%[0-9]*}"
 ARCHIVE_FORMAT=""
 if [[ -n "$TAG_PREFIX" ]]; then
@@ -323,12 +350,10 @@ iecho "Generated MXE .mk file: $OUTPUT_MAKEFILE"
 TEST_TEMPLATE="$GEN_MXE_ROOT/templates/test.lang.template"
 TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME_MXE}-test.$TEST_LANG"
 
-export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 export TEST_LANG
-export PACKAGE_NAME
+export PACKAGE_NAME_MXE
 export COMPILER=$([[ "$TEST_LANG" == "cpp" ]] && echo g++ || echo gcc)
 export DEPENDENCIES="-l$PACKAGE_NAME"
-
 
 if [[ "$TEST_LANG" == "cpp" ]]; then
     export INCLUDES="#include <cstdio>
