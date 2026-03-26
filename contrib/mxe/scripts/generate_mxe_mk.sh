@@ -250,22 +250,6 @@ fi
 iecho "---------------------------------------------------------------"
 
 GH_MODE="tags"  # Always use tags; even branches like master/main are handled as tags, because releases may contain binaries instead of source
-
-# make nice: reduce redundancy in URL, SUBDIR, FILE parts for URL downloads by replacing with $($(PKG)_VERSION)
-TAR_ARCHIVE_FILENAME="${ARCHIVE_URL##*/}"  # "filename-version.tar.gz"
-TAR_ARCHIVE_FILENAME="${TAR_ARCHIVE_FILENAME%.tar.gz}"  # "filename-version"
-
-if [ "$PACKAGE_NAME-$VERSION" == "$TAR_ARCHIVE_FILENAME" ] && [ "$SUBDIR_NAME" == "$PACKAGE_NAME-$VERSION" ]; then
-    SUBDIR_NAME='\$(PKG)-\$($(PKG)_VERSION)'
-    ARCHIVE_URL="${ARCHIVE_URL%/*}/$SUBDIR_NAME.tar.gz"
-else
-    # Only replace version part if it exists
-    if [[ "$SUBDIR_NAME" == *"$VERSION"* ]]; then
-        LITERAL_VERSION='$($(PKG)_VERSION)'      # literal string for Makefile
-        SUBDIR_NAME="${SUBDIR_NAME//$VERSION/$LITERAL_VERSION}"
-        ARCHIVE_URL="${ARCHIVE_URL%/*}/$SUBDIR_NAME.tar.gz"
-    fi
-fi
 TAR_NAME="$SUBDIR_NAME.tar.gz"
 
 sed \
@@ -319,6 +303,17 @@ sed -i "/\${BUILD_OPTIONS_MULTILINE}/{
     d
 }" "$OUTPUT_MAKEFILE"
 rm "$TMP"
+
+# Escape dots for sed
+ESC_VERSION="${VERSION//./\\.}"
+ESC_PACKAGE="${PACKAGE_NAME_MXE//./\\.}"
+# reduce hardcoded redundancy for package name and version
+for line in _URL _SUBDIR _FILE; do
+    sed -i "/^\$(PKG)$line/{
+        s|$ESC_PACKAGE|\\\$(PKG)|g
+        s|$ESC_VERSION|\\\$\\(\$(PKG)_VERSION\\)|g
+    }" "$OUTPUT_MAKEFILE"
+done
 
 iecho "Generated MXE .mk file: $OUTPUT_MAKEFILE"
 
