@@ -135,19 +135,37 @@ read_file_from_archive() {
 NOTE=""
 LANGUAGE=""
 langs=
+
+collapse_file_content() {
+    local file="$1"
+    awk 'BEGIN {RS=""; ORS="\n"} {gsub(/\r/,""); gsub(/\n[ \t]*/," "); print}' "$file"
+}
+
+extract_project_langs() {
+    local archive="$1"
+    local file="$2"
+    local cleanup="$3"  # optional: extra tr transformations
+    local line
+    line=$(read_file_from_archive "$archive" "$file" \
+        | collapse_file_content \
+        | grep -i -m1 'project[[:space:]]*(' || true)
+    local langs
+    langs=$(echo "$line" | sed -E "s/.*project[[:space:]]*\((.*)\).*/\1/")
+    if [ -n "$cleanup" ]; then
+        langs=$(echo "$langs" | eval "$cleanup")
+    fi
+    echo "$langs"
+}
+
 case "$BUILD_SYSTEM" in
     Bazel)
         NOTE="Note: Bazel projects are not supported by MXE because they attempt to access the network, which is not allowed. You will need to compile the project manually."
         ;;
     CMake)
-        project_line=$(read_file_from_archive "$ARCHIVE" "$MAIN_FILE" | grep -i -m1 'project\s*(' || true)
-        langs=$(echo "$project_line" | sed -E "s/.*project\s*\((.*)\).*/\1/")
-        langs=$(echo "$langs" | tr '[:lower:]' '[:upper:]')
+        langs=$(extract_project_langs "$ARCHIVE" "$MAIN_FILE" "tr '[:lower:]' '[:upper:]'")
         ;;
     Meson)
-        project_line=$(read_file_from_archive "$ARCHIVE" "$MAIN_FILE" | grep -m1 'project\s*(' || true)
-        langs=$(echo "$project_line" | sed -E "s/.*project\s*\((.*)\).*/\1/")
-        langs=$(echo "$langs" | tr -d "[]'\"" | tr ',' ' ')
+        langs=$(extract_project_langs "$ARCHIVE" "$MAIN_FILE" "tr -d \"[]'\\\"\" | tr ',' ' '")
         ;;
     *)
         NOTE=""
