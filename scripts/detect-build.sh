@@ -106,20 +106,63 @@ while IFS= read -r file; do
     esac
 done < <("${CMD[@]}")
 
+# ------------------------------
+# MAIN_FILE is shallowest path
+# ------------------------------
+MAIN_FILE="$MAIN_CANDIDATE"
+
+read_file_from_archive() {
+    local archive="$1"
+    local file="$2"
+
+    case "$archive" in
+        *.tar.gz|*.tgz)
+            tar -xOzf "$archive" "$file" 2>/dev/null ;;
+        *.tar.xz)
+            tar -xOJf "$archive" "$file" 2>/dev/null ;;
+        *.tar.bz2)
+            tar -xOjf "$archive" "$file" 2>/dev/null ;;
+        *.zip)
+            unzip -p "$archive" "$file" 2>/dev/null ;;
+        *)
+            return 1 ;;
+    esac
+}
+
+# ------------------------------
+# Parse out other info
+# ------------------------------
 NOTE=""
+LANGUAGE=""
+langs=
 case "$BUILD_SYSTEM" in
     Bazel)
         NOTE="Note: Bazel projects are not supported by MXE because they attempt to access the network, which is not allowed. You will need to compile the project manually."
+        ;;
+    CMake)
+        project_line=$(read_file_from_archive "$ARCHIVE" "$MAIN_FILE" | grep -i -m1 'project\s*(' || true)
+        langs=$(echo "$project_line" | sed -E "s/.*project\s*\((.*)\).*/\1/")
+        langs=$(echo "$langs" | tr '[:lower:]' '[:upper:]')
+        ;;
+    Meson)
+        project_line=$(read_file_from_archive "$ARCHIVE" "$MAIN_FILE" | grep -m1 'project\s*(' || true)
+        langs=$(echo "$project_line" | sed -E "s/.*project\s*\((.*)\).*/\1/")
+        langs=$(echo "$langs" | tr -d "[]'\"" | tr ',' ' ')
         ;;
     *)
         NOTE=""
         ;;
 esac
 
-# ------------------------------
-# MAIN_FILE is shallowest path
-# ------------------------------
-MAIN_FILE="$MAIN_CANDIDATE"
+if echo "$langs" | grep -qwE "(cpp|cxx|CXX)"; then
+    LANGUAGE="C++"
+elif echo "$langs" | grep -qwE "(^| )c( |$)|(^| )C( |$)"; then
+    LANGUAGE="C"
+elif [[ -n "$langs" ]]; then
+    LANGUAGE="$langs"
+else
+    LANGUAGE="Unknown"
+fi
 
 # ------------------------------
 # Sort other files by depth (excluding MAIN_FILE)
@@ -144,6 +187,7 @@ jq -n \
     --arg main_file "$MAIN_FILE" \
     --arg options_file "$OPTIONS_FILE" \
     --arg pc_file "$PC_FILE" \
+    --arg language "$LANGUAGE" \
     --arg note "$NOTE" \
     --argjson other_files "$(printf '%s\n' "${OTHER_FILES[@]}" | jq -R -s -c 'split("\n")[:-1]')" \
-    '{build_system: $build_system, main_file: $main_file, options_file: $options_file, pc_file: $pc_file, other_files: $other_files, note: $note}'
+    '{build_system: $build_system, main_file: $main_file, options_file: $options_file, pc_file: $pc_file, language: $language, other_files: $other_files, note: $note}'

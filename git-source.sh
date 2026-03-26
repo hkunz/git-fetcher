@@ -150,6 +150,7 @@ load_from_db() {
     REF_NAME=$(get_entry_field '.ref_name')
     CHECKSUM=$(get_entry_field '.sha256')
     BUILD_SYSTEM=$(get_entry_field '.build_system')
+    LANGUAGE=$(get_entry_field '.language')
 }
 
 # =============================================
@@ -217,6 +218,7 @@ download_archive_if_needed() {
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
     JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
     BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
+    LANGUAGE=$(echo "$JSON_OUTPUT" | jq -r '.language')
 
     if [[ -z "$DESCRIPTION" ]]; then
         decho "No description available."
@@ -224,9 +226,9 @@ download_archive_if_needed() {
     fi
 
     if [[ -n "$REF_NAME" ]]; then
-        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
+        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
     else
-        update_db "$GIT_URL" "$TAG" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM"
+        update_db "$GIT_URL" "$TAG" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
     fi
 }
 
@@ -292,8 +294,9 @@ if [[ -z "$DESCRIPTION" ]]; then
 fi
 
 iecho "Version: $(bold_bright_cyan "$VERSION")"  # normalized version to X.Y.Z format
-iecho "SHA256 checksum: $(bold_bright_cyan "$CHECKSUM")"
-iecho "Detected build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
+iecho "SHA256: $(bold_bright_cyan "$CHECKSUM")"
+iecho "Build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
+iecho "Primary language: $(bold_bright_cyan "$LANGUAGE")"
 
 # =============================================
 # Optional: generate MXE .mk file
