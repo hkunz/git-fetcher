@@ -35,7 +35,7 @@ resolve_archive() {
     local repo_path="${repo_url#https://}"
     repo_path="${repo_path#http://}"
 
-    ARCHIVE_URL=$(construct_archive_url_googlesource "$HOST" "$repo_path" "$final_ref")
+    ARCHIVE_URL=$(construct_archive_url_googlesource "$repo_path" "$final_ref")
     set_archive_info "$repo_path" "$final_ref" ""
     #iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
     #iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
@@ -53,19 +53,26 @@ get_tarname() {
 }
 
 construct_archive_url_googlesource() {
-    local tarname=$(get_tarname "$PACKAGE_NAME" "$VERSION")
+    local repo_path="$1"
+    local ref="$2"
 
-    decho "Googlesource package name: '$PACKAGE_NAME' with archive version '$ARCHIVE_VERSION'"
-    if [ -z "$ARCHIVE_VERSION" ]; then
-        eecho "Googlesource: No archive version set"
+    decho "Googlesource package name: '$PACKAGE_NAME' with ref '$ref'"
+
+    if [[ -z "$ref" ]]; then
+        eecho "Googlesource: No ref set"
         exit 1
     fi
+
+    local tarname
+    tarname=$(get_tarname "$PACKAGE_NAME" "$ref")
+
     decho "Downloading tarball: $tarname"
 
     if [[ -n "$tarname" ]]; then
         echo "https://storage.googleapis.com/${PACKAGE_NAME}-releases/$tarname"
     else
-        echo "https://$owner_repo/+archive/refs/tags/$version.tar.gz"
+        # Direct archive by ref (branch/tag/commit)
+        echo "https://$repo_path/+archive/$ref.tar.gz"
     fi
 }
 

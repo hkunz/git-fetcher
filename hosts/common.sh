@@ -170,7 +170,7 @@ construct_archive_url() {
             echo "https://bitbucket.org/$owner_repo/get/$version.tar.gz"
             ;;
         googlesource)
-            construct_archive_url_googlesource
+            echo "https://$owner_repo/+archive/$version.tar.gz"
             ;;
         *)
             eecho "Unknown host: $host"
