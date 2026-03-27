@@ -5,6 +5,7 @@
 # Optional GitHub token header for API requests
 # Optional GitHub authentication and headers
 # =============================================
+set -e
 
 GITHUB_HEADERS=(-A "git-fetcher-script")  # default User-Agent
 
@@ -57,12 +58,42 @@ download_archive() {
     iecho "Downloading from URL: $url"
     iecho "Saving to local file: $file"
 
+    # ==============================
+    # Download with HTTP validation
+    # ==============================
     headers=($(curl_headers "$url"))
-    curl -L "${headers[@]}" "$url" -o "$file"
+    local http_code=$(curl -L --retry 3 --retry-delay 2 "${headers[@]}" -w "%{http_code}" -o "$file" "$url")
 
+    # Fail on bad HTTP status
+    if ! [[ "$http_code" =~ ^2 ]]; then
+        rm -f "$file"
+        eecho "Download failed: HTTP $http_code for $url"
+        return 1
+    fi
+
+    # ==============================
+    # Validate file content
+    # ==============================
     local filetype
     filetype=$(file -b "$file")
 
+    # Reject HTML (common failure case)
+    if [[ "$filetype" == *HTML* ]]; then
+        rm -f "$file"
+        eecho "Download failed: received HTML instead of archive (likely bad URL)"
+        return 1
+    fi
+
+    # Optional: warn if suspiciously small
+    local filesize
+    filesize=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+    if [[ "$filesize" -lt 1024 ]]; then
+        wecho "Warning: downloaded file is very small ($filesize bytes)"
+    fi
+
+    # ==============================
+    # Detect archive type
+    # ==============================
     local tflag detected
     case "$filetype" in
         *gzip*)  tflag="z"; detected="gzip" ;;
@@ -71,19 +102,24 @@ download_archive() {
         *tar*)   tflag="";  detected="tar" ;;
         *)
             vecho "Not a tar archive ($filetype), skipping flat check"
-            return
+            vecho "Download finished successfully: $file"
+            return 0
             ;;
     esac
 
-    # check if filename extension matches detected type
+    # ==============================
+    # Extension sanity check
+    # ==============================
     local ext="${file##*.}"
     if [[ "$ext" == "gz" && "$detected" != "gzip" ]]; then
-        wecho "Notice: file extension suggests gzip but actual archive format is: $filetype"
+        wecho "Notice: extension says .gz but actual format is: $filetype"
     else
         vecho "File extension '$ext' matches ($filetype)"
     fi
 
-    # check if flat tarball
+    # ==============================
+    # Detect flat tarball
+    # ==============================
     local first_dirs
     first_dirs=$(tar -t${tflag}f "$file" | cut -d/ -f1 | sort -u)
 

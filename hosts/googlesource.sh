@@ -2,6 +2,7 @@
 # hosts/googlesource.sh
 # Example: https://aomedia.googlesource.com/aom/ https://go.googlesource.com/scratch
 
+set -e
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 detect_host() {
@@ -54,7 +55,11 @@ get_tarname() {
 construct_archive_url_googlesource() {
     local tarname=$(get_tarname "$PACKAGE_NAME" "$VERSION")
 
-    decho "Package name: '$PACKAGE_NAME' with archive version '$ARCHIVE_VERSION'"
+    decho "Googlesource package name: '$PACKAGE_NAME' with archive version '$ARCHIVE_VERSION'"
+    if [ -z "$ARCHIVE_VERSION" ]; then
+        eecho "Googlesource: No archive version set"
+        exit 1
+    fi
     decho "Downloading tarball: $tarname"
 
     if [[ -n "$tarname" ]]; then

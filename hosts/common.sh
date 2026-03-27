@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # hosts/common.sh
 # Shared helpers for GitHub, GitLab, Bitbucket, GoogleSource
+set -e
 
 curl_header() {
     local host="$1"
@@ -78,6 +79,7 @@ declare -A HOST_MAP=(
     [gitlab]="gitlab.com"
     [bitbucket]="bitbucket.org"
     [googlesource]="googlesource.com"
+    [sourceforge]="sourceforge.net"
 )
 
 get_known_hosts() {
@@ -111,6 +113,8 @@ detect_host_generic() {
             gitlab)       GIT_URL="https://gitlab.com/$OWNER_REPO.git" ;;
             bitbucket)    GIT_URL="https://bitbucket.org/$OWNER_REPO.git" ;;
             googlesource) GIT_URL="$url" ;;  # already full URL
+            sourceforge)  GIT_URL="https://downloads.sourceforge.net/project/$owner_repo/$version"
+        ;;
         esac
         return 0
     fi
