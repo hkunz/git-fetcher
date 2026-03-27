@@ -208,9 +208,8 @@ should_redownload() {
 # =============================================
 download_archive_if_needed() {
     ARCHIVE_VERSION="${TAG:-${BRANCH:-${REF_NAME}}}"
-    ARCHIVE_NAME="$(basename "$OWNER_REPO")-$ARCHIVE_VERSION.tar.gz"
+    ARCHIVE_NAME=$(get_archive_name "$OWNER_REPO" "$ARCHIVE_VERSION" "$HOST")
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_NAME"
-
     mkdir -p "$ROOT_DIR/downloads/"
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")

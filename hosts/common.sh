@@ -212,6 +212,13 @@ set_archive_info() {
     DESCRIPTION=$(curl -s "${curl_args[@]}" "$api" | jq -r '.description // empty')
 }
 
+get_archive_name() {
+    local owner_repo="$1"
+    local version="$2"
+    local host="$3"
+    echo "$(basename "$owner_repo")-$version.tar.gz"
+}
+
 # ==============================
 # Validate if commit exists
 # ==============================
