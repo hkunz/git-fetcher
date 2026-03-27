@@ -90,20 +90,18 @@ HOST=""
 OWNER_REPO=""
 GIT_URL=""
 
-for domain in $(get_known_domains); do
-    vecho "Checking if URL '$INPUT' contains domain: '$domain'"
-    if [[ "$INPUT" == *"$domain"* ]]; then
-        HOST="${domain%%.*}"  # strip .com/.org/etc
+for host in $(get_known_hosts); do
+    HOST_SCRIPT="$ROOT_DIR/hosts/$host.sh"
+    [[ -f "$HOST_SCRIPT" ]] || continue
+    source "$HOST_SCRIPT"
+    vecho "Trying host detector: $host"
+    if detect_host "$INPUT"; then
+        HOST="$host"
         break
     fi
 done
 
-HOST_SCRIPT="$ROOT_DIR/hosts/$HOST.sh"
-
-if [[ -n "$HOST" && -f "$HOST_SCRIPT" ]]; then
-    source "$HOST_SCRIPT"
-    detect_host "$INPUT"
-else
+if [[ -z "$HOST" ]]; then
     eecho "Unsupported host in URL '$INPUT'"
     exit 1
 fi
@@ -243,7 +241,6 @@ ARCHIVE_VERSION=
 
 ARCHIVE_FILE_DB=$(get_entry_field '.archive')
 load_from_db
-normalize_version
 
 if should_redownload; then
     if [[ -n "$REQUESTED_REF_NAME" ]]; then
@@ -255,6 +252,7 @@ if should_redownload; then
     download_archive_if_needed
     iecho "Downloaded archive: $ARCHIVE_FILE"
 else
+    normalize_version
     iecho "Download URL: $ARCHIVE_URL"
     iecho "Using archive from DB: $ARCHIVE_FILE"
 fi
