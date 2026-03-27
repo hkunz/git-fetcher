@@ -27,3 +27,15 @@ sudo apt install
 dot -Tpng deps.dot -o deps.png
 cmake --graphviz=deps.dot .
 
+# SourceForge is a nightmare — URLs are all over the place, so we can't support it automatically.
+
+URLS_POSSIBILITIES=(
+    "https://downloads.sourceforge.net/project/panotools/<package>/$PKG_SUBDIR/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/libodbcxx/libodbc++/<version>/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/<package>/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/<package>/<package>/<version>/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/faac/<package>-src/<version>/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/mad/<package>/<version>/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/<package>/<package>/<version>/$PKG_FILE"
+    "https://downloads.sourceforge.net/project/<package>/<package>-src/<version>/$PKG_FILE"
+)
