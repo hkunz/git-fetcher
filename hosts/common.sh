@@ -172,6 +172,9 @@ construct_archive_url() {
         googlesource)
             echo "https://$owner_repo/+archive/$version.tar.gz"
             ;;
+        sourceforge)
+            echo "https://downloads.sourceforge.net/project/$owner_repo/$version"
+            ;;
         *)
             eecho "Unknown host: $host"
             return 1
