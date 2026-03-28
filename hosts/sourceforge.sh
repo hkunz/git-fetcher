@@ -8,7 +8,7 @@ SOURCEFORGE_URL=
 detect_host() {
     local url="$1"
 
-    #iecho "Trying SourceForge host detection for URL: $url"
+    # iecho "Trying SourceForge host detection for URL: $url"
 
     if [[ "$url" =~ sourceforge\.net ]]; then
         if [[ ! "$url" =~ ^https://downloads\.sourceforge\.net/ ]]; then
@@ -20,13 +20,27 @@ detect_host() {
         SOURCEFORGE_URL="$url"
         ARCHIVE_FILE="$(basename "$url")"
         OWNER_REPO="$ARCHIVE_FILE"
-        GIT_URL=""
+        GIT_URL="$url"
 
         iecho "Detected SourceForge URL: $SOURCEFORGE_URL"
         return 0
     fi
 
     return 1
+}
+
+# Construct archive URL and filename from the SourceForge URL
+construct_sourceforge_archive() {
+    local url="$1"
+
+    # Ensure URL starts with the canonical downloads URL
+    if [[ ! "$url" =~ ^https://downloads\.sourceforge\.net/ ]]; then
+        eecho "Error: SourceForge URL must start with https://downloads.sourceforge.net/"
+        return 1
+    fi
+
+    ARCHIVE_URL="$url"
+    ARCHIVE_FILE="$(basename "$url")"
 }
 
 validate_sourceforge_url() {
@@ -54,19 +68,22 @@ get_archive_name() {
 }
 
 resolve_archive() {
-    # If cached → use it, NO network
-    if [[ -n "$ARCHIVE_FILE_DB" && -f "$ARCHIVE_FILE_DB" ]]; then
-        ARCHIVE_FILE="$ARCHIVE_FILE_DB"
-        ARCHIVE_URL="$ARCHIVE_FILE_DB"   # local path
-        iecho "Using cached SourceForge archive: $ARCHIVE_FILE"
-        return 0
+    # If cached → check if URL matches current requested URL
+    if [[ -n "$ARCHIVE_FILE_DB" && -f "$ARCHIVE_FILE_DB" && -n "$ARCHIVE_URL_DB" ]]; then
+        if [[ "$ARCHIVE_URL_DB" == "$SOURCEFORGE_URL" ]]; then
+            ARCHIVE_FILE="$ARCHIVE_FILE_DB"
+            ARCHIVE_URL="$ARCHIVE_FILE_DB"
+            iecho "Using cached SourceForge archive: $ARCHIVE_FILE"
+            return 0
+        else
+            iecho "Cached archive URL differs from requested URL → will redownload"
+        fi
     fi
 
     # Otherwise → use provided URL and validate
     if [[ -n "$SOURCEFORGE_URL" ]]; then
-        validate_sourceforge_url "$SOURCEFORGE_URL" || return 1
-
-        ARCHIVE_URL="$SOURCEFORGE_URL"
+        construct_sourceforge_archive "$SOURCEFORGE_URL" || return 1
+        validate_sourceforge_url "$ARCHIVE_URL" || return 1
         iecho "SourceForge archive ready for download: $ARCHIVE_URL"
         return 0
     fi

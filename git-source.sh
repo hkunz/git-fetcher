@@ -186,6 +186,8 @@ should_redownload() {
 
     # If ALL ref identifiers are empty → invalid cache → redownload
     if [[ -z "$TAG" && -z "$BRANCH" && -z "$REF_NAME" ]]; then
+        echo "CHECK === $ARCHIVE_FILE_DB"
+        echo "WITH: === $ARCHIVE_FILE"
         [[ "$ARCHIVE_FILE_DB" == "$ARCHIVE_FILE" ]] && return 1
         return 0
     fi
