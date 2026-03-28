@@ -32,6 +32,18 @@ update_db() {
     local build_system="$1"; shift
     local language="$1"
 
+    # Ensure only one of tag, branch, ref_name is non-empty
+    if [[ -n "$tag" ]]; then
+        branch=""
+        ref_name=""
+    elif [[ -n "$branch" ]]; then
+        tag=""
+        ref_name=""
+    elif [[ -n "$ref_name" ]]; then
+        tag=""
+        branch=""
+    fi
+
     init_db
     local tmp
     tmp=$(mktemp)
@@ -46,8 +58,18 @@ update_db() {
        --arg description "$description" \
        --arg build_system "$build_system" \
        --arg language "$language" \
-       '.[$url] = {latest_tag: $tag, default_branch: $branch, ref_name: $ref_name, archive_url: $archive_url, archive: $archive, sha256: $sha, package: $package, description: $description, build_system: $build_system, language: $language}' \
-       "$DB_FILE" > "$tmp"
+       '.[$url] = {
+           latest_tag: $tag,
+           default_branch: $branch,
+           ref_name: $ref_name,
+           archive_url: $archive_url,
+           archive: $archive,
+           sha256: $sha,
+           package: $package,
+           description: $description,
+           build_system: $build_system,
+           language: $language
+       }' "$DB_FILE" > "$tmp"
     mv "$tmp" "$DB_FILE"
 }
 

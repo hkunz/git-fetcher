@@ -186,6 +186,7 @@ should_redownload() {
 
     # If ALL ref identifiers are empty → invalid cache → redownload
     if [[ -z "$TAG" && -z "$BRANCH" && -z "$REF_NAME" ]]; then
+        [[ "$ARCHIVE_FILE_DB" == "$ARCHIVE_FILE" ]] && return 1
         return 0
     fi
 
@@ -195,12 +196,12 @@ should_redownload() {
     fi
     local ref="$REQUESTED_REF_NAME"
     # Match only against NON-empty DB fields
-    if [[ -n "$ref" && (
-            ( -n "$TAG" && "$ref" == "$TAG" ) ||
-            ( -n "$BRANCH" && "$ref" == "$BRANCH" ) ||
-            ( -n "$REF_NAME" && "$ref" == "$REF_NAME" )
-        ) ]]; then
-        return 1  # Already cached
+    if [[ -n "$ref" ]]; then
+        if [[ -n "$TAG" && "$ref" == "$TAG" ]] || \
+        [[ -n "$BRANCH" && "$ref" == "$BRANCH" ]] || \
+        [[ -n "$REF_NAME" && "$ref" == "$REF_NAME" ]]; then
+            return 1
+        fi
     fi
     return 0  # Otherwise → need to redownload
 }
@@ -224,10 +225,12 @@ download_archive_if_needed() {
         DESCRIPTION=$(get_description_from_tar "$ARCHIVE_FILE")
     fi
 
-    if [[ -n "$REF_NAME" ]]; then
-        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
+    if [[ -n "$TAG" ]]; then
+        update_db "$GIT_URL" "$TAG" "" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
+    elif [[ -n "$BRANCH" ]]; then
+        update_db "$GIT_URL" "" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
     else
-        update_db "$GIT_URL" "$TAG" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
+        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
     fi
 }
 
