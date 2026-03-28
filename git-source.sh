@@ -171,22 +171,23 @@ get_ref_type() {
 # Decide whether we need to redownload
 # =============================================
 should_redownload() {
+
     # Force download always overrides cache
     [[ "$FORCE_DOWNLOAD" == true ]] && return 0
 
     # If no DB entry or archive file missing → redownload
     [[ -z "$entry" || -z "$ARCHIVE_FILE_DB" || ! -f "$ARCHIVE_FILE_DB" ]] && return 0
 
-    # Load DB values
-    local tag_db branch_db ref_db
-    tag_db=$(get_entry_field '.latest_tag')
-    branch_db=$(get_entry_field '.default_branch')
-    ref_db=$(get_entry_field '.ref_name')
-
-    # If ALL ref identifiers are empty → invalid cache → redownload
-    if [[ -z "$tag_db" && -z "$branch_db" && -z "$ref_db" ]]; then
+    # If file exists but is not a valid tar → redownload
+    if ! tar xOf "$ARCHIVE_FILE_DB" &> /dev/null; then
         return 0
     fi
+
+    # If ALL ref identifiers are empty → invalid cache → redownload
+    if [[ -z "$TAG" && -z "$BRANCH" && -z "$REF_NAME" ]]; then
+        return 0
+    fi
+
     # No specific ref requested → DB copy is fine
     if [[ -z "$REQUESTED_REF_NAME" ]]; then
         return 1
@@ -194,9 +195,9 @@ should_redownload() {
     local ref="$REQUESTED_REF_NAME"
     # Match only against NON-empty DB fields
     if [[ -n "$ref" && (
-            ( -n "$tag_db" && "$ref" == "$tag_db" ) ||
-            ( -n "$branch_db" && "$ref" == "$branch_db" ) ||
-            ( -n "$ref_db" && "$ref" == "$ref_db" )
+            ( -n "$TAG" && "$ref" == "$TAG" ) ||
+            ( -n "$BRANCH" && "$ref" == "$BRANCH" ) ||
+            ( -n "$REF_NAME" && "$ref" == "$REF_NAME" )
         ) ]]; then
         return 1  # Already cached
     fi

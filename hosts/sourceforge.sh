@@ -8,7 +8,7 @@ SOURCEFORGE_URL=
 detect_host() {
     local url="$1"
 
-    iecho "Trying SourceForge host detection for URL: $url"
+    #iecho "Trying SourceForge host detection for URL: $url"
 
     if [[ "$url" =~ sourceforge\.net ]]; then
         if [[ ! "$url" =~ ^https://downloads\.sourceforge\.net/ ]]; then
