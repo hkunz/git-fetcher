@@ -180,6 +180,7 @@ should_redownload() {
 
     # If file exists but is not a valid tar → redownload
     if ! tar xOf "$ARCHIVE_FILE_DB" &> /dev/null; then
+        wecho "Warning: invalid tar file detected, redownloading..."
         return 0
     fi
 
