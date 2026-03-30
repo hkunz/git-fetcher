@@ -1,41 +1,102 @@
 #!/usr/bin/env bash
-# hosts/sourceforge.sh
+# hosts/googlesource.sh
+# Example: https://aomedia.googlesource.com/aom/ https://go.googlesource.com/scratch
+
 set -e
-source "$(dirname "${BASH_SOURCE[0]}")/url-only.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
-SOURCEFORGE_URL=
-
-# Override detect_host to add SF-specific check
 detect_host() {
+    detect_host_googlesource "$1"
+}
+
+resolve_archive() {
+    local repo_url="${1%/}"
+    local owner_repo="${repo_url#https://googlesource.com/}"
+    local api="https://googlesource.com/$owner_repo"
+
+    if git ls-remote "$repo_url" &>/dev/null; then
+        handle_http_status 200 "$repo_url"
+    else
+        handle_http_status 404 "$repo_url"
+        return 1
+    fi
+
+    local raw_tags=$(git ls-remote --tags "$repo_url" 2>/dev/null | awk '{print $2}')
+    local tags=$(echo "$raw_tags" | grep -v '{}' | sed 's#refs/tags/##')
+    local default_branch=$(git ls-remote --symref "$repo_url" HEAD 2>/dev/null | awk '/ref:/ {print $2}' | sed 's#refs/heads/##')
+
+    default_branch="${default_branch:-main}"
+    decho "Default branch: $default_branch"
+
+    local proposed_latest=$(get_latest_tag_or_branch "$tags" "$default_branch")
+    resolve_latest_tag_or_branch "$proposed_latest" "$default_branch"
+
+    local final_ref="${TAG:-$BRANCH}"
+    local repo_path="${repo_url#https://}"
+    repo_path="${repo_path#http://}"
+
+    ARCHIVE_URL=$(construct_archive_url_googlesource "$repo_path" "$final_ref")
+    set_archive_info "$repo_path" "$final_ref" ""
+    #iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
+    #iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
+}
+
+get_tarname() {
+    local package="$1"
+    local version="$2"
+
+    curl -s "https://storage.googleapis.com/${package}-releases/" \
+    | grep -oE "<Key>[^<]*${version}\.tar\.gz</Key>" \
+    | grep -v '\.asc' \
+    | sed -E 's#<Key>(.*)</Key>#\1#' \
+    | head -n1
+}
+
+construct_archive_url_googlesource() {
+    local repo_path="$1"
+    local ref="$2"
+
+    decho "Googlesource package name: '$PACKAGE_NAME' with ref '$ref'"
+
+    if [[ -z "$ref" ]]; then
+        eecho "Googlesource: No ref set"
+        exit 1
+    fi
+
+    local tarname
+    tarname=$(get_tarname "$PACKAGE_NAME" "$ref")
+
+    decho "Downloading tarball: $tarname"
+
+    if [[ -n "$tarname" ]]; then
+        echo "https://storage.googleapis.com/${PACKAGE_NAME}-releases/$tarname"
+    else
+        # Direct archive by ref (branch/tag/commit)
+        echo "https://$repo_path/+archive/$ref.tar.gz"
+    fi
+}
+
+resolve_specific_ref() {
+    local owner_repo="$1"
+    local ref_name="$2"
+    owner_repo="${owner_repo#https://}"  # Remove https:// if the user passed a full URL
+    resolve_specific_ref_generic googlesource "$owner_repo" "$ref_name" "https://%s/+archive/%s.tar.gz"
+}
+
+get_latest_release_tag() {
+    # GoogleSource repositories do not have a "latest release" concept like GitHub or GitLab.
+    # Only tags and branches exist, so use get_latest_tag_or_branch()
+    # to select the most appropriate tag.
+    :
+}
+
+detect_host_googlesource() {
     local url="$1"
-    if [[ "$url" =~ sourceforge\.net ]]; then
-        if [[ ! "$url" =~ ^https://downloads\.sourceforge\.net/ ]]; then
-            eecho "Error: SourceForge URL must start with https://downloads.sourceforge.net/"
-            return 1
-        fi
-        SOURCEFORGE_URL="$url"
-        ARCHIVE_FILE="$(basename "$url")"
-        GIT_URL="$url"        # Unique DB identifier
-        OWNER_REPO="$ARCHIVE_FILE"
-        HOST="sourceforge"
-        iecho "Detected SourceForge URL: $SOURCEFORGE_URL"
+    if [[ "$url" =~ googlesource\.com/ ]]; then
+        HOST="googlesource"
+        OWNER_REPO="${url%/}"  # strip trailing slash
+        GIT_URL="$OWNER_REPO"
         return 0
     fi
-    return 1
-}
-
-# Can still reuse generic functions for SF
-construct_sourceforge_archive() { construct_url_only_archive "$1"; }
-validate_sourceforge_url() { validate_url_only "$1"; }
-
-# SF does not support --ref or latest tag
-resolve_specific_ref() {
-    eecho "--ref is not supported for SourceForge archives."
-    iecho "   Use a direct download URL instead:"
-    iecho "   Example: gsrc https://downloads.sourceforge.net/project/opencore-amr/fdk-aac/fdk-aac-2.0.0.tar.gz"
-    exit 1
-}
-get_latest_release_tag() {
-    eecho "get latest tag not supported for SourceForge"
-    exit 1
+    return 1  # not a Googlesource URL
 }
