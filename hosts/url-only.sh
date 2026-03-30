@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # hosts/url-only.sh
 # Generic handler for direct archive URLs
-# Example: gsrc https://github.com/sharkdp/fd/archive/refs/heads/master.tar.gz
+# Example: gsrc https://downloads.sourceforge.net/project/opencore-amr/fdk-aac/fdk-aac-2.0.3.tar.gz
 
 set -e
 
@@ -53,6 +53,17 @@ resolve_archive() {
 
     ARCHIVE_URL="$GENERIC_DOWNLOAD_URL"
     ARCHIVE_FILE="$(basename "$ARCHIVE_URL")"
+
+    if [[ "$HOST" == "url-only" || "$HOST" == "sourceforge" ]]; then
+        # e.g., fdk-aac-2.0.3.tar.gz → 2.0.3
+        if [[ "$ARCHIVE_FILE" =~ ([0-9]+([._-][0-9]+)+) ]]; then
+            TAG="${BASH_REMATCH[1]}"
+        else
+            TAG="unknown"
+        fi
+    fi
+
+    normalize_version
 
     iecho "Archive ready for download: $ARCHIVE_URL"
     return 0
