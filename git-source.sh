@@ -94,15 +94,33 @@ for host in $(get_known_hosts); do
     HOST_SCRIPT="$ROOT_DIR/hosts/$host.sh"
     [[ -f "$HOST_SCRIPT" ]] || continue
     source "$HOST_SCRIPT"
-    vecho "Trying host detector: $host"
+
     if detect_host "$INPUT"; then
         HOST="$host"
         break
+    elif [[ $? -eq 2 ]]; then
+        exit 1
     fi
 done
 
 if [[ -z "$HOST" ]]; then
-    eecho "Unsupported host in URL '$INPUT'"
+    # fallback: URL-only
+    source "$ROOT_DIR/hosts/url-only.sh"
+    if detect_host_url_only "$INPUT"; then
+        HOST="url-only"
+        iecho "Using generic URL-only handler for: $INPUT"
+    else
+        eecho "Unsupported host in URL '$INPUT'"
+        exit 1
+    fi
+fi
+
+# =============================================
+# Final check
+# =============================================
+if [[ -z "$HOST" ]]; then
+    eecho "Unsupported host or invalid archive URL:"
+    eecho "  $INPUT"
     exit 1
 fi
 
@@ -186,8 +204,6 @@ should_redownload() {
 
     # If ALL ref identifiers are empty → invalid cache → redownload
     if [[ -z "$TAG" && -z "$BRANCH" && -z "$REF_NAME" ]]; then
-        echo "CHECK === $ARCHIVE_FILE_DB"
-        echo "WITH: === $ARCHIVE_FILE"
         [[ "$ARCHIVE_FILE_DB" == "$ARCHIVE_FILE" ]] && return 1
         return 0
     fi

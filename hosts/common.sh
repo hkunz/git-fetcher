@@ -64,6 +64,7 @@ handle_http_status() {
     local status="$1"
     local url="$2"
     case "$status" in
+        000) eecho "Cannot reach URL: $url (server unreachable, DNS failure, or network issue)"; return 1 ;;
         200) iecho "Repository is reachable."; return 0 ;;
         429|403) eecho "Repository not reachable: rate limit exceeded or access forbidden (HTTP $status)"; return 1 ;;
         404) eecho "Repository not found (HTTP 404)"; return 1 ;;
@@ -100,22 +101,33 @@ detect_host_generic() {
     local domain="$2"   # e.g., github.com
 
     if [[ "$url" =~ $domain ]]; then
-        # Extract host name from domain: 'github.com' -> 'github'
         HOST="${domain%%.*}"  
+        OWNER_REPO="${url#*${domain}/}"
+        OWNER_REPO="${OWNER_REPO%.git}"
+        OWNER_REPO="${OWNER_REPO%/}"
 
-        OWNER_REPO="${url#*${domain}/}"  # strip domain prefix
-        OWNER_REPO="${OWNER_REPO%.git}"  # remove trailing .git if present
-        OWNER_REPO="${OWNER_REPO%/}"     # remove trailing slash if present
+        # -------------------------------
+        # Warn if user used a direct archive URL for a known host
+        # -------------------------------
+        if [[ "$url" =~ \.(tar\.gz|tgz|zip|tar\.bz2|tar\.xz)$ ]]; then
+            # Extract just owner/repo
+            IFS='/' read -r owner repo _ <<< "$OWNER_REPO"
+            project_path="$owner/$repo"
 
-        # Construct default Git URL if needed
+            eecho "You provided a direct archive URL for a known host ($HOST)."
+            eecho "    Use the proper project URL and specify --ref for branch/tag/commit instead."
+            eecho "    Example: gsrc https://${HOST_MAP[$HOST]}/$project_path --ref <branch|tag|commit>"
+            return 2  # fatal
+        fi
+
+        # Construct default Git URL
         case "$HOST" in
             github)       GIT_URL="https://github.com/$OWNER_REPO.git" ;;
             gitlab)       GIT_URL="https://gitlab.com/$OWNER_REPO.git" ;;
             bitbucket)    GIT_URL="https://bitbucket.org/$OWNER_REPO.git" ;;
-            googlesource) GIT_URL="$url" ;;  # already full URL
-            sourceforge)  GIT_URL="https://downloads.sourceforge.net/project/$owner_repo/$version"
-        ;;
+            googlesource) GIT_URL="$url" ;;
         esac
+
         return 0
     fi
     return 1

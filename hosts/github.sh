@@ -6,6 +6,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 detect_host() {
     detect_host_generic "$1" "github.com"
+    return $?
 }
 
 resolve_archive() {
