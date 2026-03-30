@@ -28,7 +28,7 @@ ARCHIVE_VERSION=  # is the full version after the package name of a tarball name
 # Usage function
 # =============================================
 print_usage() {
-    echo "Usage: $0 [OPTIONS] <repo_url_or_owner/repo>"
+    echo "Usage: $0 [OPTIONS] <repo_url_or_owner/repo | direct_archive_url>"
     echo
     echo "Options:"
     echo "  -b, --list-branches          List all branches of the repository"
@@ -40,6 +40,11 @@ print_usage() {
     echo "  --generate-mxe-testfile      Generate MXE test file for .mk"
     echo "  --force                      Redownload archive even if it exists"
     echo "  -h, --help                   Show this help message"
+    echo
+    echo "Direct archive URLs:"
+    echo "  You can provide a direct URL to a tarball or zip file."
+    echo "  Example: $0 https://example.com/project/releases/latest.tar.gz"
+    echo "  Only works for unsupported hosts; known hosts require --ref or proper project URL."
 }
 
 # =============================================
