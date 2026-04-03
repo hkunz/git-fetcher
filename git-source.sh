@@ -13,6 +13,7 @@ LIST_BRANCHES=false
 LIST_TAGS=false
 VERBOSE=false
 DEBUG=false
+URL_ONLY=false
 GENERATE_MXE_MAKEFILE=false
 GENERATE_MXE_TESTFILE=false
 FORCE_DOWNLOAD=false
@@ -36,6 +37,7 @@ print_usage() {
     echo "  -v, --verbose                Enable verbose output"
     echo "  --debug                      Enable debug output"
     echo "  --ref=<name>                 Download a specific branch, tag, or commit"
+    echo "  --url-only                   Skip host detection; force use INPUT as direct archive URL"
     echo "  --generate-mxe-makefile      Generate MXE .mk file after download"
     echo "  --generate-mxe-testfile      Generate MXE test file for .mk"
     echo "  --force                      Redownload archive even if it exists"
@@ -67,6 +69,9 @@ while [[ $# -gt 0 ]]; do
         --generate-mxe-testfile)
             export GENERATE_MXE_TESTFILE=true
             ;;
+        --url-only)
+            URL_ONLY=true
+            ;;
         --ref=*)
             REQUESTED_REF_NAME="${1#*=}"
             ;;
@@ -95,18 +100,21 @@ HOST=""
 OWNER_REPO=""
 GIT_URL=""
 
-for host in $(get_known_hosts); do
-    HOST_SCRIPT="$ROOT_DIR/hosts/$host.sh"
-    [[ -f "$HOST_SCRIPT" ]] || continue
-    source "$HOST_SCRIPT"
 
-    if detect_host "$INPUT"; then
-        HOST="$host"
-        break
-    elif [[ $? -eq 2 ]]; then
-        exit 1
-    fi
-done
+if ! $URL_ONLY; then
+    for host in $(get_known_hosts); do
+        HOST_SCRIPT="$ROOT_DIR/hosts/$host.sh"
+        [[ -f "$HOST_SCRIPT" ]] || continue
+        source "$HOST_SCRIPT"
+
+        if detect_host "$INPUT"; then
+            HOST="$host"
+            break
+        elif [[ $? -eq 2 ]]; then
+            exit 1
+        fi
+    done
+fi
 
 if [[ -z "$HOST" ]]; then
     # fallback: URL-only

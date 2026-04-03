@@ -16,12 +16,12 @@ detect_host_url_only() {
     local url="$1"
 
     # Only accept direct archive URLs
-    if [[ "$url" =~ ^https?:// ]] && [[ "$url" =~ \.(tar\.gz|tgz|zip|tar\.bz2|tar\.xz)$ ]]; then
+    if [[ "$url" =~ ^https?:// ]]; then  # if [[ "$url" =~ ^https?:// ]] && [[ "$url" =~ \.(tar\.gz|tgz|zip|tar\.bz2|tar\.xz)$ ]]; then
         GENERIC_DOWNLOAD_URL="$url"
         ARCHIVE_URL="$url"
         ARCHIVE_FILE="$(basename "$url")"
 
-        GIT_URL="$url"   # used as DB key
+        GIT_URL="$url"
         OWNER_REPO="$ARCHIVE_FILE"
         HOST="url-only"
 
@@ -66,6 +66,12 @@ resolve_archive() {
     normalize_version
 
     iecho "Archive ready for download: $ARCHIVE_URL"
+
+    echo
+    wecho "Note: Some URLs generate tarballs dynamically when downloaded."
+    wecho "The SHA256 checksum may differ between downloads even if the code has not changed."
+    echo
+
     return 0
 }
 

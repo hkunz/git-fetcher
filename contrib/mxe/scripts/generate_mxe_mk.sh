@@ -378,10 +378,10 @@ iecho "Generated test file: $TEST_FILE"
 
 if is_pc_missing_in_src && [ "$BUILD_SYSTEM_SUPPORT" = true ]; then
     echo
-    echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME.mk' may have incomplete variables for GENERATE_PC,"
+    echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME_MXE.mk' may have incomplete variables for GENERATE_PC,"
     echo "       or even the package may dynamically generate a .pc file after building,"
     echo "       so manual generation may be unnecessary. For accurate values, build the MXE package"
-    echo "       with 'make $PACKAGE_NAME MXE_KEEP_TMP=1' and re-run this script to populate the missing .pc variables."
+    echo "       with 'make $PACKAGE_NAME_MXE MXE_KEEP_TMP=1' and re-run this script to populate the missing .pc variables."
 fi
 
 # =============================================
