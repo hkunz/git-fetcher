@@ -37,8 +37,12 @@ resolve_archive() {
 
     ARCHIVE_URL=$(construct_archive_url_googlesource "$repo_path" "$final_ref")
     # set_archive_info "$repo_path" "$final_ref" ""
-    # iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
-    # iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
+    if [[ "$ARCHIVE_URL" == *"googlesource.com"* ]]; then
+        echo
+        wecho "Note: GoogleSource generates tarballs dynamically when downloading from googlesource.com domain"
+        wecho "SHA256 checksum may differ between downloads even if the code is unchanged."
+        echo
+    fi
 }
 
 get_tarname() {
