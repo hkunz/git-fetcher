@@ -36,9 +36,9 @@ resolve_archive() {
     repo_path="${repo_path#http://}"
 
     ARCHIVE_URL=$(construct_archive_url_googlesource "$repo_path" "$final_ref")
-    set_archive_info "$repo_path" "$final_ref" ""
-    #iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
-    #iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
+    # set_archive_info "$repo_path" "$final_ref" ""
+    # iecho "Note: GoogleSource generates tarballs dynamically when downloading from https://aomedia.googlesource.com/aom/
+    # iecho "SHA256 checksum may differ between downloads even if the code is unchanged."
 }
 
 get_tarname() {
@@ -64,7 +64,7 @@ construct_archive_url_googlesource() {
     fi
 
     local tarname
-    tarname=$(get_tarname "$PACKAGE_NAME" "$ref")
+    tarname=$(get_tarname "$PACKAGE_NAME" "$VERSION")
 
     decho "Downloading tarball: $tarname"
 
