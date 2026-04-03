@@ -52,6 +52,10 @@ get_tarname() {
     | head -n1
 }
 
+construct_archive_url() {
+    construct_archive_url_googlesource "$@"
+}
+
 construct_archive_url_googlesource() {
     local repo_path="$1"
     local ref="$2"
@@ -64,6 +68,7 @@ construct_archive_url_googlesource() {
     fi
 
     local tarname
+    normalize_version
     tarname=$(get_tarname "$PACKAGE_NAME" "$VERSION")
 
     decho "Downloading tarball: $tarname"
