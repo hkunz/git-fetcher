@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # hosts/googlesource.sh
 # Example: https://aomedia.googlesource.com/aom/ https://go.googlesource.com/scratch
+# Example: https://storage.googleapis.com/aom-releases/libaom-3.13.3.tar.gz
 # Example: https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz
 
 set -e

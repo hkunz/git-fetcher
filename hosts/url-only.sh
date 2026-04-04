@@ -3,6 +3,7 @@
 # Generic handler for direct archive URLs
 # Example: gsrc https://downloads.sourceforge.net/project/opencore-amr/fdk-aac/fdk-aac-2.0.3.tar.gz
 # Example: gsrc https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz
+# Example: gsrc https://storage.googleapis.com/aom-releases/libaom-3.13.3.tar.gz
 
 set -e
 
