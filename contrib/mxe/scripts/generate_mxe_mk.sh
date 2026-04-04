@@ -106,6 +106,7 @@ decho "Additional MXE args: $MXE_ARGS"
 if [[ "$MXE_ARGS" == "default" || -z "$MXE_ARGS" ]]; then
     PACKAGE_NAME_MXE=$PACKAGE_NAME
     PACKAGE_NAME_MXE="$(echo "$PACKAGE_NAME_MXE" | sed -E 's/(\.mk|\.tar\.gz|\.tgz|\.zip|\.tar\.bz2|\.tar\.xz)$//')"
+    PACKAGE_NAME_MXE=$(echo "$PACKAGE_NAME_MXE" | tr '[:upper:]' '[:lower:]')
     iecho "No package name provided; default generation with name $(bold_bright_green "$PACKAGE_NAME_MXE")"
 else
     PACKAGE_NAME_MXE="${MXE_ARGS%%,*}"  # everything before first comma
