@@ -177,7 +177,8 @@ if echo "$langs" | grep -qwE "(cpp|cxx|CXX)"; then
 elif echo "$langs" | grep -qwE "(^| )c( |$)|(^| )C( |$)"; then
     LANGUAGE="C"
 elif [[ -n "$langs" ]]; then
-    LANGUAGE="$langs"
+    # fallback for projects like vvdec with no explicit LANGUAGES
+    LANGUAGE="C/C++"
 else
     LANGUAGE="Unknown"
 fi
