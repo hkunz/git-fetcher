@@ -240,28 +240,36 @@ export TARGET="${MXE_TARGET:-x86_64-w64-mingw32.static}"
 # =============================================
 IS_PC_GENERATED=false
 if [[ -n "$MXE_ROOT" ]]; then
-    PKGCONFIG_DIR="$MXE_ROOT/usr/$TARGET/lib/pkgconfig"
-    mapfile -t pc_files < <(
-        find "$PKGCONFIG_DIR" -iname "*.pc" \
-            | grep -i "$PACKAGE_NAME_MXE"
+    # search both lib/pkgconfig and share/pkgconfig
+    PKGCONFIG_DIRS=(
+        "$MXE_ROOT/usr/$TARGET/lib/pkgconfig"
+        "$MXE_ROOT/usr/$TARGET/share/pkgconfig"
     )
     # Filter out MXE auto-generated files
     real_pc_files=()
-    for pc in "${pc_files[@]}"; do
-        if ! head -n1 "$pc" | grep -q "MXE"; then
-            real_pc_files+=("$pc")
+    for dir in "${PKGCONFIG_DIRS[@]}"; do
+        if [[ -d "$dir" ]]; then
+            mapfile -t pc_files < <(
+                find "$dir" -iname "*.pc" | grep -i "$PACKAGE_NAME_MXE"
+            )
+            for pc in "${pc_files[@]}"; do
+                # Filter out MXE auto-generated files
+                if ! head -n1 "$pc" | grep -q "MXE"; then
+                    real_pc_files+=("$pc")
+                fi
+            done
         fi
     done
+
     if [[ ${#real_pc_files[@]} -gt 0 ]]; then
         decho "Detected possible .pc files for '$PACKAGE_NAME_MXE':"
         for pc in "${real_pc_files[@]}"; do
             decho "--  $pc"
         done
-        decho "Current .pc name: '$PC_FILE_NAME'"
         PC_FILE="${real_pc_files[0]}"
         PC_FILE_NAME="$(basename "${real_pc_files[0]}")"
         PC_FILE_NAME="${PC_FILE_NAME%.pc}"
-        decho "Replace .pc name: '$PC_FILE_NAME'"
+        decho "Using existing .pc file: '$PC_FILE_NAME'"
         IS_PC_GENERATED=true
     fi
 fi
