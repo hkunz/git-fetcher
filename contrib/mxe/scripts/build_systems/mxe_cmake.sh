@@ -141,6 +141,16 @@ query_dependencies() {
     # Clean up: remove variables, duplicates, empty lines
     DEPENDENCIES=($(printf '%s\n' "${dep_list[@]}" | sed 's/\${[^}]*}//g' | awk 'NF' | sort -u))
 
+    # Normalize CMake namespaced targets (foo::bar -> bar)
+    normalized_deps=()
+    for dep in "${DEPENDENCIES[@]}"; do
+        if [[ "$dep" == *"::"* ]]; then
+            dep="${dep##*::}"
+        fi
+        normalized_deps+=("$dep")
+    done
+    DEPENDENCIES=("${normalized_deps[@]}")
+
     # Remove any dependencies that correspond to source files in the project
     final_deps=()
     for dep in "${DEPENDENCIES[@]}"; do
