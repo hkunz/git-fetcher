@@ -2,7 +2,7 @@
 # mxe_common.sh
 
 MXE_ALIASES_JSON="$(dirname "$0")/../mappings/mxe-aliases.json"
-HOST_TOOLS=(python cmake meson ninja pkgconf pkg-config doxygen sphinx git perl pythoninterp wxwidgets)
+HOST_TOOLS=(python cmake meson ninja pkgconf pkg-config doxygen sphinx git perl pythoninterp wxwidgets jni java nuke apputils imageioapphelpers ocioarchive ociobakelut ociocheck ociochecklut ocioconvert ociolutimage ociomakeclf ociomergeconfigs ocioperf ociowrite ofxplugin oglapphelpers)
 
 alias_to_pkg() {
     local input_array=("$@")
