@@ -80,6 +80,7 @@ query_build_options() {
     # -------------------------
     BUILD_OPTIONS=("${BUILD_OPTIONS_BOOL[@]}" "${BUILD_OPTIONS_STR[@]}")
     BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | awk -F= '$2!=""' | sort -u))
+    BUILD_OPTIONS=($(printf '%s\n' "${BUILD_OPTIONS[@]}" | grep -v '^BUILD_SHARED_LIBS=' ))
 
     # -------------------------
     # 4) Debug output
