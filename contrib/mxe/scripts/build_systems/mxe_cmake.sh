@@ -151,6 +151,9 @@ query_dependencies() {
     done
     DEPENDENCIES=("${normalized_deps[@]}")
 
+    # Remove internal CMake-only deps (starting with underscore _ )
+    DEPENDENCIES=($(printf '%s\n' "${DEPENDENCIES[@]}" | grep -v '^_' ))
+
     # Remove any dependencies that correspond to source files in the project
     final_deps=()
     for dep in "${DEPENDENCIES[@]}"; do
