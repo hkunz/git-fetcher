@@ -51,10 +51,10 @@ ${BUILD_OPTIONS_MULTILINE}
 # BEGIN_PC_FILE
 	# Only needed if the project does not ship a .pc file
 	$(call GENERATE_PC, \
-		"$(PREFIX)/$(TARGET)", \
-		"$(PKG)", \
-		"$($(PKG)_DESCR)", \
-		"$($(PKG)_VERSION)", \
+		$(PREFIX)/$(TARGET), \
+		$(PKG), \
+		$($(PKG)_DESCR), \
+		$($(PKG)_VERSION), \
 		${REQUIRES}, \
 		${REQUIRES_PRIVATE}, \
 		${LIBS}, \
