@@ -118,14 +118,16 @@ query_dependencies() {
             fi
         done < <(echo "$content" \
             | grep -ioE '(add_library|add_executable|add_.*_plugin)[[:space:]]*\([[:space:]]*([A-Za-z0-9_]+)' \
-            | sed -E 's/(add_library|add_executable|add_.*_plugin)[[:space:]]*\([[:space:]]*//I')
+            | sed -E 's/(add_library|add_executable|add_.*_plugin)[[:space:]]*\([[:space:]]*//I') \
+            || true
 
         # 2) Extract find_package/find_dependency
         while read -r dep; do
             dep_list+=("$dep")
         done < <(echo "$content" \
             | grep -ioE 'find_(package|dependency)[[:space:]]*\([[:space:]]*([A-Za-z0-9_:]+)' \
-            | sed -E 's/find_(package|dependency)[[:space:]]*\([[:space:]]*//I')
+            | sed -E 's/find_(package|dependency)[[:space:]]*\([[:space:]]*//I') \
+            || true
 
         # 3) Extract target_link_libraries but skip internal targets with sources
         while read -r lib; do
@@ -136,7 +138,8 @@ query_dependencies() {
             $skip || dep_list+=("$lib")
         done < <(echo "$content" \
             | grep -ioE 'target_link_libraries[[:space:]]*\([[:space:]]*([A-Za-z0-9_:]+)' \
-            | sed -E 's/target_link_libraries[[:space:]]*\([[:space:]]*//I')
+            | sed -E 's/target_link_libraries[[:space:]]*\([[:space:]]*//I') \
+            || true
     done
 
     # Clean up: remove variables, duplicates, empty lines

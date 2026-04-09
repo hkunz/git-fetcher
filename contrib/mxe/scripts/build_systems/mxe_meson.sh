@@ -79,7 +79,7 @@ query_dependencies() {
         if [[ -n "$deps_json" ]]; then
             # Parse dependency names and filter out internal depXXX
             mapfile -t DEPENDENCIES < <(
-                echo "$deps_json" | jq -r '.[].name' | grep -Ev '^dep[0-9]+$'
+                echo "$deps_json" | jq -r '.[].name' | grep -Ev '^dep[0-9]+$' || true
             )
             # Deduplicate
             DEPENDENCIES=($(printf '%s\n' "${DEPENDENCIES[@]}" | sort -u))
