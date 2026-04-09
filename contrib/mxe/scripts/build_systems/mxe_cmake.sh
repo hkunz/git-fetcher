@@ -174,6 +174,16 @@ query_dependencies() {
     DEPENDENCIES=("${final_deps[@]}")
     MXE_DEPENDENCIES=($(alias_to_pkg "${DEPENDENCIES[@]}"))
 
+    # Deduplicate MXE_DEPENDENCIES while preserving order
+    declare -A seen
+    deduped=()
+    for dep in "${MXE_DEPENDENCIES[@]}"; do
+        [[ -n "$dep" && -z "${seen[$dep]}" ]] || continue
+        seen["$dep"]=1
+        deduped+=("$dep")
+    done
+    MXE_DEPENDENCIES=("${deduped[@]}")
+
     decho "Detected external CMake dependencies: ${DEPENDENCIES[*]}"
     decho "Detected external CMake dependencies (alias_to_pkg): ${MXE_DEPENDENCIES[*]}"
 }
