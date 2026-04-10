@@ -209,26 +209,31 @@ IGNORE=""
 
 mkdir -p "$OUTPUT_DIR"
 
+DELETE_ARGS=()
+
 if [[ "$GIT_URL" == *"github.com"* ]]; then
     GH_MODE=$(deduce_gh_mode "$ARCHIVE_URL")
-    DELETE_BLOCK='/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d'  # Remove non-GitHub block
+    DELETE_ARGS+=(-e '/# BEGIN_NON_GITHUB/,/# END_NON_GITHUB/d')  # Remove non-GitHub block
 else
-    DELETE_BLOCK='/# BEGIN_GITHUB/,/# END_GITHUB/d'  # Remove GitHub block
+    DELETE_ARGS+=(-e '/# BEGIN_GITHUB/,/# END_GITHUB/d')  # Remove GitHub block
 fi
 
 # Remove build system blocks
 case "$BUILD_SYSTEM" in
     CMake)
         BUILD_OPTIONS_MULTILINE+="\t\t-DCMAKE_BUILD_TYPE=Release"
-        DELETE_BUILD='/# BEGIN_MESON/,/# END_MESON/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
+        DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         ;;
     Meson)
         BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release \\"
-        DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_OTHER_BUILD_SYSTEM/,/# END_OTHER_BUILD_SYSTEM/d'
+        DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         MAKE_CMD="MXE_NINJA"
         ;;
     *)
-        DELETE_BUILD='/# BEGIN_CMAKE/,/# END_CMAKE/d; /# BEGIN_MESON/,/# END_MESON/d'
+        DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
         ;;
 esac
 
@@ -278,8 +283,8 @@ if is_pc_missing_in_src && [[ "$IS_PC_GENERATED" != true ]]; then
     PC_FILE_NAME='\$(PKG)'
 else
     vecho "PC file exists and is not empty: $PC_FILE"
-    DELETE_PC_BLOCK='/^$/ { N; /^[[:space:]]*\n[[:space:]]*# BEGIN_PC_FILE$/ { N; /# END_PC_FILE/d } } ; /^[[:space:]]*# BEGIN_PC_FILE/,/^[[:space:]]*# END_PC_FILE/d'  # Remove PC file generation block
-    DELETE_INCLUDE_BLOCK='/^$/ { N; /^[[:space:]]*\n[[:space:]]*# BEGIN_INCLUDE$/ { N; /# END_INCLUDE/d } } ; /^[[:space:]]*# BEGIN_INCLUDE/,/^[[:space:]]*# END_INCLUDE/d'
+    DELETE_ARGS+=(-e '/# BEGIN_PC_FILE/,/# END_PC_FILE/d')  # Remove PC file generation block
+    DELETE_ARGS+=(-e '/# BEGIN_INCLUDE/,/# END_INCLUDE/d')  # remove include block
     PC_FILE_NAME=$(basename "$PC_FILE")
     PC_FILE_NAME="${PC_FILE_NAME%.pc.in}"
     PC_FILE_NAME="${PC_FILE_NAME%.pc}"
@@ -297,10 +302,7 @@ GH_MODE="tags"  # Always use tags; even branches like master/main are handled as
 TAR_NAME="$SUBDIR_NAME.tar.gz"
 
 sed \
-${DELETE_BLOCK:+-e "$DELETE_BLOCK"} \
-${DELETE_BUILD:+-e "$DELETE_BUILD"} \
-${DELETE_PC_BLOCK:+-e "$DELETE_PC_BLOCK"} \
-${DELETE_INCLUDE_BLOCK:+-e "$DELETE_INCLUDE_BLOCK"} \
+"${DELETE_ARGS[@]}" \
 -e "s|\${OWNER_REPO}|$OWNER_REPO|g" \
 -e "s|\${GH_MODE}|$GH_MODE|g" \
 -e "s|\${ARCHIVE_FORMAT}|$ARCHIVE_FORMAT|g" \
