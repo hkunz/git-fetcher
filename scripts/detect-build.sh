@@ -201,12 +201,26 @@ fi
 # ------------------------------
 # Output as JSON
 # ------------------------------
+tmpfile=$(mktemp)
+
+printf '%s\n' "${OTHER_FILES[@]}" | jq -R . | jq -s . > "$tmpfile"
+
 jq -n \
-    --arg build_system "$BUILD_SYSTEM" \
-    --arg main_file "$MAIN_FILE" \
-    --arg options_file "$OPTIONS_FILE" \
-    --arg pc_file "$PC_FILE" \
-    --arg language "$LANGUAGE" \
-    --arg note "$NOTE" \
-    --argjson other_files "$(printf '%s\n' "${OTHER_FILES[@]}" | jq -R -s -c 'split("\n")[:-1]')" \
-    '{build_system: $build_system, main_file: $main_file, options_file: $options_file, pc_file: $pc_file, language: $language, other_files: $other_files, note: $note}'
+  --slurpfile other_files "$tmpfile" \
+  --arg build_system "$BUILD_SYSTEM" \
+  --arg main_file "$MAIN_FILE" \
+  --arg options_file "$OPTIONS_FILE" \
+  --arg pc_file "$PC_FILE" \
+  --arg language "$LANGUAGE" \
+  --arg note "$NOTE" \
+  '{
+    build_system: $build_system,
+    main_file: $main_file,
+    options_file: $options_file,
+    pc_file: $pc_file,
+    language: $language,
+    other_files: $other_files[0],
+    note: $note
+  }'
+
+rm -f "$tmpfile"
