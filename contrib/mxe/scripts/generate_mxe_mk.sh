@@ -300,6 +300,7 @@ iecho "---------------------------------------------------------------"
 
 GH_MODE="tags"  # Always use tags; even branches like master/main are handled as tags, because releases may contain binaries instead of source
 TAR_NAME="$SUBDIR_NAME.tar.gz"
+LIBS="-l$PACKAGE_NAME_MXE"
 
 sed \
 "${DELETE_ARGS[@]}" \
