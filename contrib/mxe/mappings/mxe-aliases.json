@@ -273,6 +273,7 @@
   "yaml": "libyaml",
   "zip": "libzip",
   "zmq": "libzmq",
+  "liblzma": "lzma",
   "netcdf-cxx": "netcdf-cxx4",
   "netcdf4": "netcdf",
   "ncursesw": "ncurses",
