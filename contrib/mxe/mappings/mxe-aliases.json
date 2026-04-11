@@ -153,7 +153,7 @@
   "hyperscan-lib": "hyperscan",
   "icu": "icu4c",
   "id3": "id3lib",
-  "tbb": "intel-tbb",
+  "tbb": "onetbb",
   "jpeg": "libjpeg-turbo",
   "libjpeg": "libjpeg-turbo",
   "json": "nlohmann-json",
