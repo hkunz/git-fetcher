@@ -360,6 +360,12 @@ sed -i "/_URL\|_SUBDIR\|_FILE\|pkg-config/{
     s|$ESC_VERSION|\\\$\\(\$(PKG)_VERSION\\)|g
 }" "$OUTPUT_MAKEFILE"
 
+FILE_VALUE=$(grep '\$(PKG)_FILE' "$OUTPUT_MAKEFILE" | sed 's/.*:= *//')
+if [ -n "$FILE_VALUE" ]; then
+    ESC_FILE_VALUE="${FILE_VALUE//./\\.}"
+    sed -i "/\$(PKG)_URL/ s|$ESC_FILE_VALUE|\\\$\\(\$(PKG)_FILE\\)|g" "$OUTPUT_MAKEFILE"
+fi
+
 iecho "Generated MXE .mk file: $OUTPUT_MAKEFILE"
 
 # =============================================
