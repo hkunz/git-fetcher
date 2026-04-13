@@ -377,6 +377,7 @@ TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME_MXE}-test.$TEST_LANG"
 
 export TEST_LANG
 export PACKAGE_NAME_MXE
+export PC_FILE_NAME
 export COMPILER=$([[ "$TEST_LANG" == "cpp" ]] && echo g++ || echo gcc)
 export DEPENDENCIES="-l$PACKAGE_NAME"
 
