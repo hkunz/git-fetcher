@@ -147,6 +147,7 @@
   "libheif": "heif",
   "heif-lib": "heif",
   "hidapi-lib": "hidapi",
+  "hwy": "highway",
   "highway-lib": "highway",
   "hiredis-lib": "hiredis",
   "hunspell-lib": "hunspell",
