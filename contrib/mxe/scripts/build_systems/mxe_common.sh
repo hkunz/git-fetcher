@@ -2,7 +2,7 @@
 # mxe_common.sh
 
 MXE_ALIASES_JSON="$(dirname "$0")/../mappings/mxe-aliases.json"
-HOST_TOOLS=(python python3 pybind11 pythonlibsnew module pkgname cmake meson ninja pkgconf pkg-config doxygen sphinx git perl pythoninterp wxwidgets jni java nuke apputils imageioapphelpers ocioarchive ociobakelut ociocheck ociochecklut ocioconvert ociolutimage ociomakeclf ociomergeconfigs ocioperf ociowrite ofxplugin oglapphelpers swig)
+HOST_TOOLS=(python python3 pybind11 pythonlibsnew module pkgname cmake meson ninja pkgconf pkg-config doxygen sphinx git perl pythoninterp wxwidgets jni java nuke apputils imageioapphelpers ocioarchive ociobakelut ociocheck ociochecklut ocioconvert ociolutimage ociomakeclf ociomergeconfigs ocioperf ociowrite ofxplugin oglapphelpers swig cuda cudatoolkit)
 
 alias_to_pkg() {
     local input_array=("$@")
