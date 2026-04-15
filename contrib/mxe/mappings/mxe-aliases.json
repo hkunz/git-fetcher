@@ -276,6 +276,7 @@
   "zip": "libzip",
   "zmq": "libzmq",
   "liblzma": "lzma",
+  "minizip": "minizip-ng",
   "netcdf-cxx": "netcdf-cxx4",
   "netcdf4": "netcdf",
   "ncursesw": "ncurses",
