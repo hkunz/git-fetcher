@@ -101,10 +101,6 @@ required_vars=(
     CHECKSUM
     DESCRIPTION
     GIT_URL
-    HOMEPAGE_URL
-    LANGUAGE
-    MXE_ARGS
-    DEBUG
 )
 
 missing=0
