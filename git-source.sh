@@ -300,7 +300,7 @@ num_dirs=$(echo "$top_level_dirs" | wc -l)
 
 if [ "$num_dirs" -eq 1 ]; then
     ARCHIVE_SUBDIR="$top_level_dirs"
-    iecho "Archive subdirectory detected: $ARCHIVE_SUBDIR"
+    decho "Archive subdirectory detected: $ARCHIVE_SUBDIR"
 else
     eecho "Archive contains $num_dirs top-level entries: $top_level_dirs"
     eecho "Expected exactly one top-level folder in the tarball. Aborting."
