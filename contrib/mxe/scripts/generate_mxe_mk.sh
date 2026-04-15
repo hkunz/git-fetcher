@@ -281,7 +281,7 @@ if [[ -n "$MXE_ROOT" ]]; then
 fi
 
 if is_pc_missing_in_src && [[ "$IS_PC_GENERATED" != true ]]; then
-    PC_FILE_NAME="$PACKAGE_NAME_MXE"
+    PC_FILE_NAME='\$(PKG)'
 else
     vecho "PC file exists and is not empty: $PC_FILE"
     DELETE_ARGS+=(-e '/# BEGIN_PC_FILE/,/# END_PC_FILE/d')  # Remove PC file generation block
