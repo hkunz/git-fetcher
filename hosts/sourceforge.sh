@@ -36,3 +36,7 @@ detect_host() {
 
     return 1
 }
+
+get_repo_homepage() {
+    echo ""
+}

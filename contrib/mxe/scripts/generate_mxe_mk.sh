@@ -57,6 +57,7 @@ print_usage() {
     echo "  --checksum <sha256>           SHA256 checksum of archive"
     echo "  --description <desc>          Package description"
     echo "  --website <url>               Package website"
+    echo "  --homepage <url>              Package home page"
     echo "  --language <lang>             Primary language used in package"
     echo "  --debug                       Enable debug output"
     echo "  -h, --help                    Show this help message"
@@ -81,6 +82,7 @@ while [[ $# -gt 0 ]]; do
         --checksum) CHECKSUM="$2"; shift 2 ;;
         --description) DESCRIPTION="$2"; shift 2 ;;
         --website) GIT_URL="$2"; shift 2 ;;
+        --homepage) HOMEPAGE_URL="$2"; shift 2 ;;
         --language) LANGUAGE="$2"; shift 2 ;;
         --debug) DEBUG=true; shift ;;
         -h|--help) print_usage; exit 0 ;;
@@ -88,14 +90,36 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Check required variables
-for var in ARCHIVE_FILE SUBDIR_NAME PACKAGE_NAME VERSION ARCHIVE_URL CHECKSUM DESCRIPTION GIT_URL; do
+required_vars=(
+    OWNER_REPO
+    ARCHIVE_FILE
+    SUBDIR_NAME
+    PACKAGE_NAME
+    TAG
+    VERSION
+    ARCHIVE_URL
+    CHECKSUM
+    DESCRIPTION
+    GIT_URL
+    HOMEPAGE_URL
+    LANGUAGE
+    MXE_ARGS
+    DEBUG
+)
+
+missing=0
+for var in "${required_vars[@]}"; do
     if [[ -z "${!var}" ]]; then
-        echo "Missing required argument: $var"
-        print_usage
-        exit 1
+        echo "ERROR: Missing required argument: $var"
+        missing=1
     fi
 done
+
+if [[ "$missing" -eq 1 ]]; then
+    echo "Aborting due to missing required arguments."
+    print_usage
+    exit 1
+fi
 
 iecho "======================= MXE Generation ======================="
 
@@ -133,6 +157,7 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 # =============================================
 # Extract the entire archive
 # =============================================
+iecho "Extracting archive → $TMP_DIR"
 mkdir -p "$TMP_DIR"
 if file "$ARCHIVE_FILE" | grep -qE 'gzip|tar archive'; then
     decho "Extracting archive: $ARCHIVE_FILE into $TMP_DIR"
@@ -167,6 +192,7 @@ MXE_DEPENDENCIES=()
 # Source the appropriate file
 if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
     source "$BUILD_SYSTEM_FILE"
+    iecho "Analyzing build system and dependencies (may be slow for large projects)"
     mxe_query_build
     if is_pc_missing_in_src; then
         decho "Missing .pc file at '$TMP_DIR/$PC_FILE'. Generating fallback pkg-config variables..."
@@ -311,7 +337,7 @@ sed \
 -e "s|\${GH_MODE}|$GH_MODE|g" \
 -e "s|\${ARCHIVE_FORMAT}|$ARCHIVE_FORMAT|g" \
 -e "s|\${PACKAGE}|$PACKAGE_NAME_MXE|g" \
--e "s|\${WEBSITE}|$GIT_URL|g" \
+-e "s|\${WEBSITE}|${HOMEPAGE_URL:-$GIT_URL}|g" \
 -e "s|\${VERSION}|$VERSION|g" \
 -e "s|\${DESCRIPTION}|$DESCRIPTION|g" \
 -e "s|\${ARCHIVE_URL}|$ARCHIVE_URL|g" \

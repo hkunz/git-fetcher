@@ -419,3 +419,7 @@ get_description_from_tar() {
 
     echo "$description"
 }
+
+get_repo_homepage() {
+    echo ""
+}

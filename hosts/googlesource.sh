@@ -111,3 +111,7 @@ detect_host_googlesource() {
     fi
     return 1  # not a Googlesource URL
 }
+
+get_repo_homepage() {
+    echo ""
+}

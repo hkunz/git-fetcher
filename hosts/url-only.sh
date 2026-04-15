@@ -113,3 +113,7 @@ get_archive_name() {
     # Just return filename
     echo "$(basename "$owner_repo")"
 }
+
+get_repo_homepage() {
+    echo ""
+}

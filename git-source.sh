@@ -180,6 +180,7 @@ load_from_db() {
     CHECKSUM=$(get_entry_field '.sha256')
     BUILD_SYSTEM=$(get_entry_field '.build_system')
     LANGUAGE=$(get_entry_field '.language')
+    HOMEPAGE=$(get_entry_field '.homepage')
 }
 
 # =============================================
@@ -248,6 +249,7 @@ download_archive_if_needed() {
     download_archive "$ARCHIVE_URL" "$ARCHIVE_FILE"
     CHECKSUM=$(compute_sha256 "$ARCHIVE_FILE")
     JSON_OUTPUT=$(bash "$SCRIPT_DIR/detect-build.sh" "$ARCHIVE_FILE")
+    HOMEPAGE=$(get_repo_homepage "$OWNER_REPO")
     BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
     LANGUAGE=$(echo "$JSON_OUTPUT" | jq -r '.language')
 
@@ -257,11 +259,11 @@ download_archive_if_needed() {
     fi
 
     if [[ -n "$TAG" ]]; then
-        update_db "$GIT_URL" "$TAG" "" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
+        update_db "$GIT_URL" "$TAG" "" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
     elif [[ -n "$BRANCH" ]]; then
-        update_db "$GIT_URL" "" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
+        update_db "$GIT_URL" "" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
     else
-        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE"
+        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
     fi
 }
 
@@ -326,6 +328,7 @@ if [[ -z "$DESCRIPTION" ]]; then
     DESCRIPTION="No description available"
 fi
 
+iecho "Homepage: ${HOMEPAGE:-No homepage URL found}"
 iecho "Version: $(bold_bright_cyan "$VERSION")"  # normalized version to X.Y.Z format
 iecho "SHA256: $(bold_bright_cyan "$CHECKSUM")"
 iecho "Build system: $(bold_bright_cyan "$BUILD_SYSTEM")"
@@ -347,6 +350,7 @@ if [[ "$GENERATE_MXE_MAKEFILE" == true || "$GENERATE_MXE_TESTFILE" == true ]]; t
         --checksum "$CHECKSUM" \
         --description "$DESCRIPTION" \
         --website "$GIT_URL" \
+        --homepage "$HOMEPAGE" \
         --language "$LANGUAGE" \
         $( [[ "$DEBUG" == true ]] && echo --debug )
 fi

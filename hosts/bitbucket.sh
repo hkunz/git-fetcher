@@ -45,3 +45,27 @@ get_latest_release_tag() {
     # to pick the most recent tag if needed.
     :
 }
+
+get_repo_homepage() {
+    local owner_repo="$1"
+    local owner="${owner_repo%%/*}"
+    local repo="${owner_repo##*/}"
+    local api="https://api.bitbucket.org/2.0/repositories/$owner/$repo"
+
+    readarray -t curl_args < <(curl_header "$HOST")
+    local website=$(curl -s "${curl_args[@]}" "$api" | jq -r '.website // empty')
+
+    if [[ -n "$website" && "$website" != "null" ]]; then
+        echo "$website"
+        return 0
+    fi
+    # fallback: official repo URL from API (more correct than manual string)
+    local html_url
+    html_url=$(curl -s "${curl_args[@]}" "$api" | jq -r '.links.html.href // empty')
+
+    if [[ -n "$html_url" && "$html_url" != "null" ]]; then
+        echo "$html_url"
+        return 0
+    fi
+    echo ""
+}

@@ -30,7 +30,8 @@ update_db() {
     local package="$1"; shift
     local description="$1"; shift
     local build_system="$1"; shift
-    local language="$1"
+    local language="$1"; shift
+    local homepage="$1"
 
     # Ensure only one of tag, branch, ref_name is non-empty
     if [[ -n "$tag" ]]; then
@@ -58,6 +59,7 @@ update_db() {
        --arg description "$description" \
        --arg build_system "$build_system" \
        --arg language "$language" \
+       --arg homepage "$homepage" \
        '.[$url] = {
            latest_tag: $tag,
            default_branch: $branch,
@@ -68,7 +70,8 @@ update_db() {
            package: $package,
            description: $description,
            build_system: $build_system,
-           language: $language
+           language: $language,
+           homepage: $homepage
        }' "$DB_FILE" > "$tmp"
     mv "$tmp" "$DB_FILE"
 }

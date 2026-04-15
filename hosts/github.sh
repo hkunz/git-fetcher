@@ -45,3 +45,15 @@ get_latest_release_tag() {
     local latest_tag=$(curl -s "${curl_args[@]}" "$api/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     echo "$latest_tag"
 }
+
+get_repo_homepage() {
+    local owner_repo="$1"
+    local api="https://api.github.com/repos/$owner_repo"
+    readarray -t curl_args < <(curl_header "$HOST")
+    local homepage=$(curl -s "${curl_args[@]}" "$api" | jq -r '.homepage // empty')
+    if [[ -n "$homepage" && "$homepage" != "null" ]]; then
+        echo "$homepage"
+        return 0
+    fi
+    echo ""
+}

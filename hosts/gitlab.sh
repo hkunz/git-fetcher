@@ -46,3 +46,16 @@ get_latest_release_tag() {
     local latest_tag=$(curl -s "${curl_args[@]}" "$api/releases?per_page=1&order_by=released_at&sort=desc" | jq -r '.[0].tag_name // empty')
     echo "$latest_tag"
 }
+
+get_repo_homepage() {
+    local owner_repo="$1"
+    local encoded=$(encode_repo_path_for_api "$owner_repo")
+    local api="https://gitlab.com/api/v4/projects/$encoded"
+    readarray -t curl_args < <(curl_header "$HOST")
+    local homepage=$(curl -s "${curl_args[@]}" "$api" | jq -r '.homepage // empty')
+    if [[ -n "$homepage" && "$homepage" != "null" ]]; then
+        echo "$homepage"
+        return 0
+    fi
+    echo ""
+}
