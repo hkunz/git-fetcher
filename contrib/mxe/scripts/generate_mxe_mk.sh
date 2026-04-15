@@ -99,7 +99,6 @@ required_vars=(
     VERSION
     ARCHIVE_URL
     CHECKSUM
-    DESCRIPTION
     GIT_URL
 )
 
