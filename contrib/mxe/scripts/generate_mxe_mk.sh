@@ -95,7 +95,6 @@ required_vars=(
     ARCHIVE_FILE
     SUBDIR_NAME
     PACKAGE_NAME
-    TAG
     VERSION
     ARCHIVE_URL
     CHECKSUM
