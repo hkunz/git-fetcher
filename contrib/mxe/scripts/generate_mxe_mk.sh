@@ -280,6 +280,7 @@ if [[ -n "$MXE_ROOT" ]]; then
     fi
 fi
 
+TESTFILE_PC_FILE_NAME="$PACKAGE_NAME_MXE"
 if is_pc_missing_in_src && [[ "$IS_PC_GENERATED" != true ]]; then
     PC_FILE_NAME='\$(PKG)'
 else
@@ -289,6 +290,7 @@ else
     PC_FILE_NAME=$(basename "$PC_FILE")
     PC_FILE_NAME="${PC_FILE_NAME%.pc.in}"
     PC_FILE_NAME="${PC_FILE_NAME%.pc}"
+    TESTFILE_PC_FILE_NAME="$PC_FILE_NAME"
 fi
 
 TAG_PREFIX="${TAG%%[0-9]*}"
@@ -377,7 +379,7 @@ TEST_FILE="$OUTPUT_DIR/${PACKAGE_NAME_MXE}-test.$TEST_LANG"
 
 export TEST_LANG
 export PACKAGE_NAME_MXE
-export PC_FILE_NAME
+export TESTFILE_PC_FILE_NAME
 export COMPILER=$([[ "$TEST_LANG" == "cpp" ]] && echo g++ || echo gcc)
 export DEPENDENCIES="-l$PACKAGE_NAME"
 
