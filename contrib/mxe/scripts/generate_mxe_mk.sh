@@ -271,19 +271,31 @@ if [[ -n "$MXE_ROOT" ]]; then
         "$MXE_ROOT/usr/$TARGET/lib/pkgconfig"
         "$MXE_ROOT/usr/$TARGET/share/pkgconfig"
     )
-    # Filter out MXE auto-generated files
+
     real_pc_files=()
     for dir in "${PKGCONFIG_DIRS[@]}"; do
         if [[ -d "$dir" ]]; then
+
+            pc_files=()
+
+            # exact match first
             mapfile -t pc_files < <(
-                find "$dir" -iname "*.pc" | grep -i "$PACKAGE_NAME_MXE"
+                find "$dir" -iname "${PACKAGE_NAME_MXE}.pc"
             )
+
+            # fallback ONLY if name is reasonable
+            if [[ ${#pc_files[@]} -eq 0 && ${#PACKAGE_NAME_MXE} -ge 3 ]]; then
+                mapfile -t pc_files < <(
+                    find "$dir" -iname "*${PACKAGE_NAME_MXE}*.pc"
+                )
+            fi
             for pc in "${pc_files[@]}"; do
-                # Filter out MXE auto-generated files
+                # Filter out MXE auto-generated .pc files
                 if ! head -n1 "$pc" | grep -q "MXE"; then
                     real_pc_files+=("$pc")
                 fi
             done
+
         fi
     done
 
@@ -292,10 +304,44 @@ if [[ -n "$MXE_ROOT" ]]; then
         for pc in "${real_pc_files[@]}"; do
             decho "--  $pc"
         done
-        PC_FILE="${real_pc_files[0]}"
-        PC_FILE_NAME="$(basename "${real_pc_files[0]}")"
+        best_pc=""
+        best_score=9999
+
+        for pc in "${real_pc_files[@]}"; do
+            fname="$(basename "$pc")"
+            score=100
+
+            # exact match wins
+            if [[ "$fname" == "${PACKAGE_NAME_MXE}.pc" ]]; then
+                score=0
+            fi
+
+            # prefix match (good)
+            if [[ "$fname" == "${PACKAGE_NAME_MXE}"*.pc ]]; then
+                score=1
+            fi
+
+            # lib prefix match (common in pkg-config naming)
+            if [[ "$fname" == lib${PACKAGE_NAME_MXE}*.pc ]]; then
+                score=2
+            fi
+
+            # penalize unrelated matches (example: cairo-png.pc for png etc.)
+            if [[ "$fname" != *"${PACKAGE_NAME_MXE}"* ]]; then
+                score=50
+            fi
+
+            if [[ $score -lt $best_score ]]; then
+                best_score=$score
+                best_pc="$pc"
+            fi
+        done
+
+        PC_FILE="$best_pc"
+        PC_FILE_NAME="$(basename "$best_pc")"
         PC_FILE_NAME="${PC_FILE_NAME%.pc}"
-        decho "Using existing .pc file: '$PC_FILE_NAME'"
+
+        decho "Using best .pc file: '$PC_FILE_NAME'"
         IS_PC_GENERATED=true
     fi
 fi
