@@ -102,6 +102,7 @@ echo
 echo "Installation complete! Installed files recorded in: $MANIFEST"
 echo "Add $BIN_DIR to your PATH if not already included:"
 echo "  export PATH=\"$BIN_DIR:\$PATH\""
+echo
 echo "You can now run:"
 echo "  gsrc -h"
 echo "  git-source -h"
@@ -136,9 +137,11 @@ done
 echo
 echo "Optional: to copy generated .mk files into your MXE project, set MXE_ROOT"
 echo "to your MXE root directory before running the generator:"
+echo
 echo "  export MXE_ROOT=\"$MXE_SUGGESTED\""
 echo "  export MXE_TARGET=\"x86_64-w64-mingw32.static\"  # optional override"
 echo "  export GITHUB_TOKEN=\"<your_token_here>\"  # optional, avoids API rate limits"
+echo
 echo "Then run the generator script with:"
-echo "  ./git-source.sh <repository> --generate-mxe-makefile"
+echo "  gsrc <repository> --generate-mxe-makefile"
 echo "This will copy the generated .mk files into \$MXE_ROOT/src/ automatically."
