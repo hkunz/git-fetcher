@@ -275,23 +275,15 @@ if [[ -n "$MXE_ROOT" ]]; then
     real_pc_files=()
     for dir in "${PKGCONFIG_DIRS[@]}"; do
         if [[ -d "$dir" ]]; then
-
             pc_files=()
 
-            # exact match first
+            # discover candidate .pc files for this package (name-based match)
             mapfile -t pc_files < <(
-                find "$dir" -iname "${PACKAGE_NAME_MXE}.pc"
+                find "$dir" -iname "*${PACKAGE_NAME_MXE}*.pc"
             )
-
-            # fallback ONLY if name is reasonable
-            if [[ ${#pc_files[@]} -eq 0 && ${#PACKAGE_NAME_MXE} -ge 3 ]]; then
-                mapfile -t pc_files < <(
-                    find "$dir" -iname "*${PACKAGE_NAME_MXE}*.pc"
-                )
-            fi
             for pc in "${pc_files[@]}"; do
                 # Filter out MXE auto-generated .pc files
-                if ! head -n1 "$pc" | grep -q "MXE"; then
+                if [[ ! $(head -n1 "$pc") == *MXE* ]]; then
                     real_pc_files+=("$pc")
                 fi
             done
