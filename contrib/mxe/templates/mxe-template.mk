@@ -1,7 +1,9 @@
 # This file is part of MXE. See LICENSE.md for licensing information.
+# Initial package scaffold generated with the "gsrc" tool:
+# https://github.com/hkunz/git-fetcher
 
 # BEGIN_INCLUDE
-include src/common/pkgutils.mk
+include src/common/pkgconfig-generator.mk
 # END_INCLUDE
 
 PKG             := ${PACKAGE}

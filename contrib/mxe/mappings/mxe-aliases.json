@@ -155,6 +155,7 @@
   "icu": "icu4c",
   "id3": "id3lib",
   "tbb": "onetbb",
+  "intel-tbb": "onetbb",
   "jpeg": "libjpeg-turbo",
   "libjpeg": "libjpeg-turbo",
   "json": "nlohmann-json",
