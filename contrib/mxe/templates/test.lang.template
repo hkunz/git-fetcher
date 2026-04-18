@@ -1,13 +1,17 @@
 /*
-    Minimal test program for ${PACKAGE_NAME_MXE}, verifying basic functionality
-    and compatibility with MXE static builds on Windows.
+    This file is part of MXE. See LICENSE.md for licensing information.
 
-    To compile with MXE (example):
+    Initial test file scaffold generated using the "gsrc" tool:
+    https://github.com/hkunz/git-fetcher
+
+    To compile the test with MXE (recommended using pkg-config):
 
     ./usr/bin/${TARGET}-${COMPILER} \
         src/${PACKAGE_NAME_MXE}-test.${TEST_LANG} \
         $(./usr/bin/${TARGET}-pkg-config --cflags --libs ${TESTFILE_PC_FILE_NAME}) \
         -o usr/${TARGET}/bin/test-${PACKAGE_NAME_MXE}.exe
+
+    Alternative manual compilation:
 
     ./usr/bin/${TARGET}-${COMPILER} \
         src/${PACKAGE_NAME_MXE}-test.${TEST_LANG} \
