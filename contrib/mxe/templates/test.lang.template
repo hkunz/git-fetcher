@@ -4,7 +4,7 @@
     Initial test file scaffold generated using the "gsrc" tool:
     https://github.com/hkunz/git-fetcher
 
-    To compile the test with MXE (recommended using pkg-config):
+    Example compilation using pkg-config:
 
     ./usr/bin/${TARGET}-${COMPILER} \
         src/${PACKAGE_NAME_MXE}-test.${TEST_LANG} \
