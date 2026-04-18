@@ -351,8 +351,8 @@ if is_pc_missing_in_src && [[ "$IS_PC_GENERATED" != true ]]; then
     PC_FILE_NAME='\$(PKG)'
 else
     vecho "PC file exists and is not empty: $PC_FILE"
-    DELETE_ARGS+=(-e '/# BEGIN_PC_FILE/,/# END_PC_FILE/d')  # Remove PC file generation block
-    DELETE_ARGS+=(-e '/# BEGIN_INCLUDE/,/# END_INCLUDE/d')  # remove include block
+    DELETE_ARGS+=(-e '/# BEGIN_PC_FILE/,/# END_PC_FILE/{N;d;}')  # Remove PC file generation block
+    DELETE_ARGS+=(-e '/# BEGIN_INCLUDE/,/# END_INCLUDE/{N;d;}')  # remove include block
     PC_FILE_NAME=$(basename "$PC_FILE")
     PC_FILE_NAME="${PC_FILE_NAME%.pc.in}"
     PC_FILE_NAME="${PC_FILE_NAME%.pc}"
