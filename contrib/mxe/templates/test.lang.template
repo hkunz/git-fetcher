@@ -4,14 +4,14 @@
     Initial test file scaffold generated using the "gsrc" tool:
     https://github.com/hkunz/git-fetcher
 
-    Example compilation using pkg-config:
+    Compilation (pkg-config):
 
     ./usr/bin/${TARGET}-${COMPILER} \
         src/${PACKAGE_NAME_MXE}-test.${TEST_LANG} \
         $(./usr/bin/${TARGET}-pkg-config --cflags --libs ${TESTFILE_PC_FILE_NAME}) \
         -o usr/${TARGET}/bin/test-${PACKAGE_NAME_MXE}.exe
 
-    Alternative manual compilation:
+    Compilation (manual):
 
     ./usr/bin/${TARGET}-${COMPILER} \
         src/${PACKAGE_NAME_MXE}-test.${TEST_LANG} \
