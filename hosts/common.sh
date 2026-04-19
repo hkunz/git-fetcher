@@ -253,27 +253,36 @@ encode_repo_path_for_api() {
 }
 
 normalize_version() {
-    # Determine version: Extract version from tag robustly (dots, underscores, or dashes)
     if [[ -n "$TAG" ]]; then
-        # extract version from tag
         if [[ "$TAG" =~ ([0-9]+([._-][0-9]+)+) ]]; then
-            VERSION="${BASH_REMATCH[1]}"
-            VERSION="${VERSION//[_-]/.}"
+            local raw="${BASH_REMATCH[1]}"
+            # detect separator used in the version
+            if [[ "$raw" =~ _ ]]; then
+                SEP="_"
+            elif [[ "$raw" =~ - ]]; then
+                SEP="-"
+            else
+                SEP="."
+            fi
+            VERSION="${raw//[._-]/$SEP}"  # rebuild version using same separator
         else
             VERSION="$TAG"
         fi
         ARCHIVE_VERSION="$TAG"
+
     elif [[ -n "$BRANCH" ]]; then
         VERSION="$BRANCH"
         ARCHIVE_VERSION="$BRANCH"
+
     elif [[ -n "$REF_NAME" ]]; then
-        # commit SHA or custom ref → use first 7 chars
         VERSION="${REF_NAME:0:7}"
         ARCHIVE_VERSION="$REF_NAME"
+
     else
         VERSION="unknown"
-        ARCHIVE_VERSION="$VERSION"
+        ARCHIVE_VERSION="unknown"
     fi
+
     decho "Normalized version: $VERSION"
     decho "Archive version: $ARCHIVE_VERSION"
 }
