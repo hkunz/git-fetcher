@@ -62,6 +62,40 @@ Generate an MXE .mk file for the repository using the default library name.
 .B --generate-mxe-makefile=<libname>
 Generate an MXE .mk file for the repository, using the specified library name.
 
+.SH INSTALLATION
+This tool can be run directly from the source repository without installation:
+
+.nf
+\&./git-source.sh https://github.com/user/repo
+.fi
+
+After installation, the tool can be used globally from anywhere using the gsrc command.
+
+.TP
+.B Install to default system prefix
+.nf
+\&./install.sh
+.fi
+
+.TP
+.B Install to a custom user prefix
+.nf
+\&./install.sh --prefix $HOME/.local
+.fi
+
+.SH ENVIRONMENT
+After installation, ensure your PATH includes the install location:
+
+.nf
+export PATH="$HOME/.local/bin:$PATH"
+.fi
+
+This allows gsrc to be used from any directory:
+
+.nf
+gsrc https://github.com/user/repo
+.fi
+
 .SH EXAMPLES
 .TP
 Download the latest GitHub release:
