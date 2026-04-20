@@ -126,8 +126,17 @@ add_ref() {
     USED_REFS+=("$1")
 }
 
-[[ -n "${REQUESTED_TAG:-}" ]]     && add_ref "--tag"
-[[ -n "${REQUESTED_BRANCH:-}" ]]  && add_ref "--branch"
+if [[ "$REQUESTED_TAG" =~ ^[0-9a-f]{7,40}$ ]]; then
+    eecho "Error: ambiguous tag looks like commit hash. Use --commit instead."
+    exit 1
+fi
+if [[ -n "$REQUESTED_BRANCH" ]]; then
+    if is_valid_git_commit_hash "$REQUESTED_BRANCH"; then
+        eecho "Error: --branch cannot be a commit hash. Use --commit instead."
+        exit 1
+    fi
+    add_ref "--branch"
+fi
 [[ -n "${REQUESTED_COMMIT:-}" ]] && {
     is_valid_git_commit_hash "$REQUESTED_COMMIT" || {
         eecho "Invalid commit hash: $REQUESTED_COMMIT"
