@@ -36,7 +36,10 @@ print_usage() {
     echo "  -t, --list-tags              List all tags of the repository"
     echo "  -v, --verbose                Enable verbose output"
     echo "  --debug                      Enable debug output"
-    echo "  --ref=<name>                 Download a specific branch, tag, or commit"
+    echo "  --ref=<name>                 Download a specific branch, tag, or commit"  # TODO: remove deprecated --ref option
+    echo "  --tag=<name>                 Download a specific tag"
+    echo "  --branch=<name>              Download a specific branch"
+    echo "  --commit=<name>              Download a specific commit"
     echo "  --url-only                   Skip host detection; force use INPUT as direct archive URL"
     echo "  --generate-mxe-makefile      Generate MXE .mk file after download"
     echo "  --generate-mxe-testfile      Generate MXE test file for .mk"
@@ -46,7 +49,8 @@ print_usage() {
     echo "Direct archive URLs:"
     echo "  You can provide a direct URL to a tarball or zip file."
     echo "  Example: $0 https://example.com/project/releases/latest.tar.gz"
-    echo "  Only works for unsupported hosts; known hosts require --ref or proper project URL."
+    echo "Only works for unsupported hosts."
+    echo "For known hosts, use a project URL and optionally specify one of: --branch, --tag, or --commit to select a revision."
 }
 
 # =============================================
@@ -72,15 +76,58 @@ while [[ $# -gt 0 ]]; do
         --url-only)
             URL_ONLY=true
             ;;
+        # TODO: remove this deprecated option
         --ref=*)
-            REQUESTED_REF_NAME="${1#*=}"
+            REQUESTED_DEPRECATED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
+            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this variable
             ;;
+        # TODO: remove this deprecated option
         --ref)
             if [[ -z "$2" || "$2" == -* ]]; then
                 eecho "Error: --ref requires a branch, tag, or commit"
                 exit 1
             fi
-            REQUESTED_REF_NAME="$2"
+            REQUESTED_DEPRECATED_REF_NAME="$2"  # TODO: remove this deprecated variable
+            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
+            shift
+            ;;
+        --tag=*)
+            REQUESTED_TAG="${1#*=}"
+            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
+            ;;
+        --tag)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                eecho "Error: --tag requires a tag name"
+                exit 1
+            fi
+            REQUESTED_TAG="$2"
+            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
+            shift
+            ;;
+        --branch=*)
+            REQUESTED_BRANCH="${1#*=}"
+            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
+            ;;
+        --branch)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                eecho "Error: --branch requires a branch name"
+                exit 1
+            fi
+            REQUESTED_BRANCH="$2"
+            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
+            shift
+            ;;
+        --commit=*)
+            REQUESTED_COMMIT="${1#*=}"
+            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
+            ;;
+        --commit)
+            if [[ -z "$2" || "$2" == -* ]]; then
+                eecho "Error: --commit requires a commit hash"
+                exit 1
+            fi
+            REQUESTED_COMMIT="$2"
+            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
             shift
             ;;
         --force) FORCE_DOWNLOAD=true ;;
@@ -92,6 +139,31 @@ while [[ $# -gt 0 ]]; do
 done
 
 [ -n "$INPUT" ] || { print_usage; exit 1; }
+
+REF_OPTION_COUNT=0
+USED_REFS=()
+
+add_ref() {
+    ((REF_OPTION_COUNT+=1))
+    USED_REFS+=("$1")
+}
+
+[[ -n "${REQUESTED_TAG:-}" ]]     && add_ref "--tag"
+[[ -n "${REQUESTED_BRANCH:-}" ]]  && add_ref "--branch"
+[[ -n "${REQUESTED_COMMIT:-}" ]] && {
+    is_valid_git_commit_hash "$REQUESTED_COMMIT" || {
+        eecho "Invalid commit hash: $REQUESTED_COMMIT"
+        exit 1
+    }
+    add_ref "--commit"
+}
+[[ -n "${REQUESTED_DEPRECATED_REF_NAME:-}" ]] && add_ref "--ref"  # TODO: remove deprecated --ref option
+
+if (( REF_OPTION_COUNT > 1 )); then
+    eecho "Error: multiple ref selectors provided: ${USED_REFS[*]}"
+    eecho "Use only one of: --tag, --branch, or --commit"
+    exit 1
+fi
 
 # =============================================
 # Host detection

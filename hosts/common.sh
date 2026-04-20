@@ -242,6 +242,21 @@ check_commit_exists() {
 }
 
 # ==============================
+# Validate if commit syntax
+# ==============================
+is_valid_git_commit_hash() {
+    local ref="$1"
+
+    ref="${ref//[[:space:]]/}"
+
+    [[ -z "$ref" ]] && return 1
+
+    [[ "$ref" =~ ^[0-9a-fA-F]{7,40}$ ]] || return 1
+
+    return 0
+}
+
+# ==============================
 # Encode a repository path for use in an HTTP API URL
 # ==============================
 encode_repo_path_for_api() {
