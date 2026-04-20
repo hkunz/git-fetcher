@@ -45,6 +45,44 @@ check_http() {
 }
 
 # =============================================
+# Detect archive type
+# =============================================
+detect_archive_type() {
+    local file="$1"
+
+    case "$file" in
+        *.tar.gz|*.tgz)   echo "tar.gz" ;;
+        *.tar.xz|*.txz)   echo "tar.xz" ;;
+        *.tar.bz2|*.tbz2) echo "tar.bz2" ;;
+        *.tar)            echo "tar" ;;
+        *.zip)            echo "zip" ;;
+        *.tar.lz)         echo "tar.lz" ;;
+        *)                echo "unknown" ;;
+    esac
+}
+
+# =============================================
+# Extract archive type
+# =============================================
+extract_archive() {
+    local file="$1"
+    local type
+    type=$(detect_archive_type "$file")
+
+    case "$type" in
+        tar.gz)   tar -xzf "$file" ;;
+        tar.xz)   tar -xJf "$file" ;;
+        tar.bz2)  tar -xjf "$file" ;;
+        tar)      tar -xf "$file" ;;
+        zip)      unzip "$file" ;;
+        *)
+            eecho "Unsupported archive type: $file"
+            return 1
+            ;;
+    esac
+}
+
+# =============================================
 # Download an archive
 # Arguments:
 #   $1 - URL

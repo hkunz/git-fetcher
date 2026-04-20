@@ -360,28 +360,55 @@ resolve_specific_ref_generic() {
 
 get_description_from_tar() {
     local archive_file="$1"
-    local first_dir
+    local first_dir=""
     local description=""
+    local readme_file=""
+    local file_list=""
+
     decho "Parsing description in any README file within $archive_file"
 
-    first_dir=$(tar -tzf "$archive_file" | cut -d/ -f1 | sort -u | head -n1)
+    # -----------------------------
+    # Detect tar type once
+    # -----------------------------
+    case "$archive_file" in
+        *.tar.gz|*.tgz) TAR="tar -tzf" ;;
+        *.tar.xz)       TAR="tar -tJf" ;;
+        *.tar.bz2)      TAR="tar -tjf" ;;
+        *.tar)          TAR="tar -tf" ;;
+        *) return 1 ;;
+    esac
 
-    local readme_file
+    # -----------------------------
+    # List archive ONCE
+    # -----------------------------
+    file_list=$($TAR "$archive_file")
+
+    # -----------------------------
+    # Get top-level directory
+    # -----------------------------
+    first_dir=$(echo "$file_list" | cut -d/ -f1 | sort -u | head -n1)
+
+    # -----------------------------
+    # Find README without re-scanning tar
+    # -----------------------------
     for f in README.md README.rst README.txt README; do
-        if tar -tzf "$archive_file" | grep -q "^$first_dir/$f$"; then
+        if echo "$file_list" | grep -q "^$first_dir/$f$"; then
             readme_file="$first_dir/$f"
             decho "Found file: $readme_file"
             break
         fi
     done
 
+    # -----------------------------
+    # Extract description
+    # -----------------------------
     if [[ -n "$readme_file" ]]; then
-        # Get first line that starts with #
-        description=$(tar -xOzf "$archive_file" "$readme_file" \
+        description=$(tar -xOf "$archive_file" "$readme_file" \
             | grep '^#' \
             | head -n1 \
-            | sed 's/^#\+ *//'  # remove leading # symbols and spaces
+            | sed 's/^#\+ *//'
         )
+
         description="${description:-Custom ref ${COMMIT:-$BRANCH:-$TAG} (no upstream description)}"
     else
         decho "No README file found"

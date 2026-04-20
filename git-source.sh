@@ -320,12 +320,10 @@ download_archive_if_needed() {
     HOMEPAGE=$(get_repo_homepage "$OWNER_REPO")
     BUILD_SYSTEM=$(echo "$JSON_OUTPUT" | jq -r '.build_system')
     LANGUAGE=$(echo "$JSON_OUTPUT" | jq -r '.language')
-
     if [[ -z "$DESCRIPTION" ]]; then
         decho "No description available."
         DESCRIPTION=$(get_description_from_tar "$ARCHIVE_FILE")
     fi
-
     if [[ -n "$TAG" ]]; then
         update_db "$GIT_URL" "$TAG" "" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
     elif [[ -n "$BRANCH" ]]; then

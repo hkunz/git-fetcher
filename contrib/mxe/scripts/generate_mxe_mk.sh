@@ -153,15 +153,15 @@ iecho "Main Build System File: $(bold_bright_cyan "$MAIN_FILE")"
 # =============================================
 iecho "Extracting archive → $TMP_DIR"
 mkdir -p "$TMP_DIR"
-if file "$ARCHIVE_FILE" | grep -qE 'gzip|tar archive'; then
-    decho "Extracting archive: $ARCHIVE_FILE into $TMP_DIR"
-    tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR"
+
+if tar -xf "$ARCHIVE_FILE" -C "$TMP_DIR" 2>/dev/null; then
+    decho "Extraction successful"
 else
-    eecho "$(bold_bright_red "Downloaded file is not a valid tar.gz archive: $ARCHIVE_FILE")"
+    eecho "$(bold_bright_red "Failed to extract archive: $ARCHIVE_FILE")"
     exit 1
 fi
 
-TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)  # Detect top-level folder (source root)
+TOP_DIR=$(tar -tf "$ARCHIVE_FILE" | head -1 | cut -d/ -f1)
 export SOURCE_ROOT="$TMP_DIR/$TOP_DIR"
 
 # =============================================
