@@ -226,6 +226,27 @@ deduce_gh_mode() {
 }
 
 # =============================================
+# Get extension
+# =============================================
+get_extension() {
+    local file="$1"
+    case "$file" in
+        *.tar.gz)  echo "tar.gz" ;;
+        *.tgz)     echo "tar.gz" ;;
+        *.tar.xz)  echo "tar.xz" ;;
+        *.txz)     echo "tar.xz" ;;
+        *.tar.bz2) echo "tar.bz2" ;;
+        *.tbz2)    echo "tar.bz2" ;;
+        *.tar)     echo "tar" ;;
+        *.zip)     echo "zip" ;;
+        *)
+            # fallback: last extension only
+            echo "${file##*.}"
+            ;;
+    esac
+}
+
+# =============================================
 # General message printer with optional prefix and conditional printing
 # Arguments:
 #   $1 - variable name to check (VERBOSE, DEBUG, INFO, WARNING, or ALWAYS)
