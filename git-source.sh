@@ -248,7 +248,7 @@ load_from_db() {
     DESCRIPTION=$(get_entry_field '.description')
     TAG=$(get_entry_field '.latest_tag')
     BRANCH=$(get_entry_field '.default_branch')
-    REF_NAME=$(get_entry_field '.ref_name')
+    COMMIT=$(get_entry_field '.ref_name')
     CHECKSUM=$(get_entry_field '.sha256')
     BUILD_SYSTEM=$(get_entry_field '.build_system')
     LANGUAGE=$(get_entry_field '.language')
@@ -289,7 +289,7 @@ should_redownload() {
     fi
 
     # If ALL ref identifiers are empty → invalid cache → redownload
-    if [[ -z "$TAG" && -z "$BRANCH" && -z "$REF_NAME" ]]; then
+    if [[ -z "$TAG" && -z "$BRANCH" && -z "$COMMIT" ]]; then
         [[ "$ARCHIVE_FILE_DB" == "$ARCHIVE_FILE" ]] && return 1
         return 0
     fi
@@ -298,12 +298,12 @@ should_redownload() {
     if [[ -z "$REQUESTED_REF_NAME" ]]; then
         return 1
     fi
-    local ref="$REQUESTED_REF_NAME"
+
     # Match only against NON-empty DB fields
-    if [[ -n "$ref" ]]; then
-        if [[ -n "$TAG" && "$ref" == "$TAG" ]] || \
-        [[ -n "$BRANCH" && "$ref" == "$BRANCH" ]] || \
-        [[ -n "$REF_NAME" && "$ref" == "$REF_NAME" ]]; then
+    if [[ -n "$REQUESTED_REF_NAME" ]]; then
+        if [[ -n "$TAG" && "$REQUESTED_REF_NAME" == "$TAG" ]] || \
+        [[ -n "$BRANCH" && "$REQUESTED_REF_NAME" == "$BRANCH" ]] || \
+        [[ -n "$COMMIT" && "$REQUESTED_REF_NAME" == "$COMMIT" ]]; then
             return 1
         fi
     fi
@@ -314,7 +314,7 @@ should_redownload() {
 # Download archive if needed
 # =============================================
 download_archive_if_needed() {
-    ARCHIVE_VERSION="${TAG:-${BRANCH:-${REF_NAME}}}"
+    ARCHIVE_VERSION="${TAG:-${BRANCH:-${COMMIT}}}"
     ARCHIVE_NAME=$(get_archive_name "$OWNER_REPO" "$ARCHIVE_VERSION" "$HOST")
     ARCHIVE_FILE="$ROOT_DIR/downloads/$ARCHIVE_NAME"
     mkdir -p "$ROOT_DIR/downloads/"
@@ -335,7 +335,7 @@ download_archive_if_needed() {
     elif [[ -n "$BRANCH" ]]; then
         update_db "$GIT_URL" "" "$BRANCH" "" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
     else
-        update_db "$GIT_URL" "" "" "$REF_NAME" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
+        update_db "$GIT_URL" "" "" "$COMMIT" "$ARCHIVE_URL" "$ARCHIVE_FILE" "$CHECKSUM" "$PACKAGE_NAME" "$DESCRIPTION" "$BUILD_SYSTEM" "$LANGUAGE" "$HOMEPAGE"
     fi
 }
 
@@ -344,7 +344,7 @@ download_archive_if_needed() {
 # =============================================
 TAG=
 BRANCH=
-REF_NAME=
+COMMIT=
 VERSION=
 ARCHIVE_VERSION=
 
@@ -384,8 +384,8 @@ if [[ -n "$TAG" ]]; then
     iecho "Latest Tag: $(bold_bright_green "$TAG")"
 elif [[ -n "$BRANCH" ]]; then
     iecho "Default Branch: $(bold_bright_green "$BRANCH")"
-elif [[ -n "$REF_NAME" ]]; then
-    iecho "Commit/Custom Ref: $(bold_bright_green "$REF_NAME")"
+elif [[ -n "$COMMIT" ]]; then
+    iecho "Commit/Custom Ref: $(bold_bright_green "$COMMIT")"
 fi
 
 # =============================================

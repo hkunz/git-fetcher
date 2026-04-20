@@ -202,7 +202,7 @@ set_archive_info() {
     local ref="$2"
     local api="$3"
 
-    decho "Final ref chosen: '$ref' (TAG='$TAG', BRANCH='$BRANCH', REF='$REF_NAME')"
+    decho "Final ref chosen: '$ref' (TAG='$TAG', BRANCH='$BRANCH', REF='$COMMIT')"
 
     if [[ -n "$TAG" ]]; then
         ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$TAG" "tags")
@@ -210,12 +210,12 @@ set_archive_info() {
     elif [[ -n "$BRANCH" ]]; then
         ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$BRANCH" "heads")
 
-    elif [[ -n "$REF_NAME" ]]; then
+    elif [[ -n "$COMMIT" ]]; then
         # commit or custom ref
-        ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$REF_NAME" "")
+        ARCHIVE_URL=$(construct_archive_url "$HOST" "$repo" "$COMMIT" "")
 
     else
-        eecho "Error: No valid ref (TAG/BRANCH/REF_NAME all empty)"
+        eecho "Error: No valid ref (TAG/BRANCH/COMMIT all empty)"
         exit 1
     fi
 
@@ -289,9 +289,9 @@ normalize_version() {
         VERSION="$BRANCH"
         ARCHIVE_VERSION="$BRANCH"
 
-    elif [[ -n "$REF_NAME" ]]; then
-        VERSION="${REF_NAME:0:7}"
-        ARCHIVE_VERSION="$REF_NAME"
+    elif [[ -n "$COMMIT" ]]; then
+        VERSION="${COMMIT:0:7}"
+        ARCHIVE_VERSION="$COMMIT"
 
     else
         VERSION="unknown"
@@ -392,19 +392,19 @@ resolve_specific_ref_generic() {
 
     case "$ref_type" in
         branch)
-            BRANCH="$ref_name"; TAG=""; REF_NAME=""
+            BRANCH="$ref_name"; TAG=""; COMMIT=""
             ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$BRANCH" "heads")
             ;;
         tag)
-            TAG="$ref_name"; BRANCH=""; REF_NAME=""
+            TAG="$ref_name"; BRANCH=""; COMMIT=""
             ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$TAG" "tags")
             ;;
         commit)
-            TAG=""; BRANCH=""; REF_NAME="$ref_name"
+            TAG=""; BRANCH=""; COMMIT="$ref_name"
             if [[ -n "$commit_url_template" ]]; then
-                ARCHIVE_URL=$(printf "$commit_url_template" "$owner_repo" "$REF_NAME")
+                ARCHIVE_URL=$(printf "$commit_url_template" "$owner_repo" "$COMMIT")
             else
-                ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$REF_NAME")
+                ARCHIVE_URL=$(construct_archive_url "$host" "$owner_repo" "$COMMIT")
             fi
             ;;
     esac
@@ -435,10 +435,10 @@ get_description_from_tar() {
             | head -n1 \
             | sed 's/^#\+ *//'  # remove leading # symbols and spaces
         )
-        description="${description:-Custom ref ${REF_NAME:-$BRANCH:-$TAG} (no upstream description)}"
+        description="${description:-Custom ref ${COMMIT:-$BRANCH:-$TAG} (no upstream description)}"
     else
         decho "No README file found"
-        description="Custom ref ${REF_NAME:-$BRANCH:-$TAG} (no README found)"
+        description="Custom ref ${COMMIT:-$BRANCH:-$TAG} (no README found)"
     fi
 
     echo "$description"
