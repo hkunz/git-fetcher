@@ -36,7 +36,7 @@ resolve_archive() {
 }
 
 resolve_specific_ref() {
-    resolve_specific_ref_generic gitlab "$1" "$2" "https://gitlab.com/%s/-/archive/%s/$(basename "$1")-%s.tar.gz"
+    resolve_specific_ref_generic gitlab "$1" "$2" "$3" "https://gitlab.com/%s/-/archive/%s/$(basename "$1")-%s.tar.gz"
 }
 
 get_latest_release_tag() {

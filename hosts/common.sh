@@ -115,8 +115,8 @@ detect_host_generic() {
             project_path="$owner/$repo"
 
             eecho "You provided a direct archive URL for a known host ($HOST)."
-            eecho "    Use the proper project URL and specify --ref for branch/tag/commit instead."
-            eecho "    Example: gsrc https://${HOST_MAP[$HOST]}/$project_path --ref <branch|tag|commit>"
+            eecho "    Use the proper project URL and specify --tag, --branch or --commit instead."
+            eecho "    Example: gsrc https://${HOST_MAP[$HOST]}/$project_path --tag <name>"
             return 2  # fatal
         fi
 
@@ -380,7 +380,8 @@ resolve_specific_ref_generic() {
     local host="$1"
     local owner_repo="$2"
     local ref_name="$3"
-    local commit_url_template="$4"  # optional
+    local ref_type="$4"
+    local commit_url_template="$5"  # optional
 
     vecho "Resolving specific ref: $ref_name"
 

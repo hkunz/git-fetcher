@@ -90,8 +90,9 @@ construct_archive_url_googlesource() {
 resolve_specific_ref() {
     local owner_repo="$1"
     local ref_name="$2"
+    local ref_type="$3"
     owner_repo="${owner_repo#https://}"  # Remove https:// if the user passed a full URL
-    resolve_specific_ref_generic googlesource "$owner_repo" "$ref_name" "https://%s/+archive/%s.tar.gz"
+    resolve_specific_ref_generic googlesource "$owner_repo" "$ref_name" "$ref_type" "https://%s/+archive/%s.tar.gz"
 }
 
 get_latest_release_tag() {

@@ -35,7 +35,7 @@ resolve_archive() {
 }
 
 resolve_specific_ref() {
-    resolve_specific_ref_generic github "$1" "$2" "https://github.com/%s/archive/%s.tar.gz"
+    resolve_specific_ref_generic github "$1" "$2" "$3" "https://github.com/%s/archive/%s.tar.gz"
 }
 
 get_latest_release_tag() {

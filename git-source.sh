@@ -36,7 +36,6 @@ print_usage() {
     echo "  -t, --list-tags              List all tags of the repository"
     echo "  -v, --verbose                Enable verbose output"
     echo "  --debug                      Enable debug output"
-    echo "  --ref=<name>                 Download a specific branch, tag, or commit"  # TODO: remove deprecated --ref option
     echo "  --tag=<name>                 Download a specific tag"
     echo "  --branch=<name>              Download a specific branch"
     echo "  --commit=<name>              Download a specific commit"
@@ -76,24 +75,8 @@ while [[ $# -gt 0 ]]; do
         --url-only)
             URL_ONLY=true
             ;;
-        # TODO: remove this deprecated option
-        --ref=*)
-            REQUESTED_DEPRECATED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
-            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this variable
-            ;;
-        # TODO: remove this deprecated option
-        --ref)
-            if [[ -z "$2" || "$2" == -* ]]; then
-                eecho "Error: --ref requires a branch, tag, or commit"
-                exit 1
-            fi
-            REQUESTED_DEPRECATED_REF_NAME="$2"  # TODO: remove this deprecated variable
-            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
-            shift
-            ;;
         --tag=*)
             REQUESTED_TAG="${1#*=}"
-            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
             ;;
         --tag)
             if [[ -z "$2" || "$2" == -* ]]; then
@@ -101,12 +84,10 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             REQUESTED_TAG="$2"
-            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
             shift
             ;;
         --branch=*)
             REQUESTED_BRANCH="${1#*=}"
-            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
             ;;
         --branch)
             if [[ -z "$2" || "$2" == -* ]]; then
@@ -114,12 +95,10 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             REQUESTED_BRANCH="$2"
-            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
             shift
             ;;
         --commit=*)
             REQUESTED_COMMIT="${1#*=}"
-            REQUESTED_REF_NAME="${1#*=}"  # TODO: remove this deprecated variable
             ;;
         --commit)
             if [[ -z "$2" || "$2" == -* ]]; then
@@ -127,7 +106,6 @@ while [[ $# -gt 0 ]]; do
                 exit 1
             fi
             REQUESTED_COMMIT="$2"
-            REQUESTED_REF_NAME="$2"  # TODO: remove this deprecated variable
             shift
             ;;
         --force) FORCE_DOWNLOAD=true ;;
@@ -157,7 +135,6 @@ add_ref() {
     }
     add_ref "--commit"
 }
-[[ -n "${REQUESTED_DEPRECATED_REF_NAME:-}" ]] && add_ref "--ref"  # TODO: remove deprecated --ref option
 
 if (( REF_OPTION_COUNT > 1 )); then
     eecho "Error: multiple ref selectors provided: ${USED_REFS[*]}"
@@ -288,26 +265,36 @@ should_redownload() {
         return 0
     fi
 
-    # If ALL ref identifiers are empty → invalid cache → redownload
+    # If DB has no ref metadata → cannot trust cache for versioned requests
     if [[ -z "$TAG" && -z "$BRANCH" && -z "$COMMIT" ]]; then
-        [[ "$ARCHIVE_FILE_DB" == "$ARCHIVE_FILE" ]] && return 1
         return 0
     fi
 
-    # No specific ref requested → DB copy is fine
-    if [[ -z "$REQUESTED_REF_NAME" ]]; then
+    # If no specific ref requested → DB copy is fine
+    if [[ -z "$REQUESTED_TAG" && -z "$REQUESTED_BRANCH" && -z "$REQUESTED_COMMIT" ]]; then
         return 1
     fi
 
-    # Match only against NON-empty DB fields
-    if [[ -n "$REQUESTED_REF_NAME" ]]; then
-        if [[ -n "$TAG" && "$REQUESTED_REF_NAME" == "$TAG" ]] || \
-        [[ -n "$BRANCH" && "$REQUESTED_REF_NAME" == "$BRANCH" ]] || \
-        [[ -n "$COMMIT" && "$REQUESTED_REF_NAME" == "$COMMIT" ]]; then
-            return 1
-        fi
+    # If TAG requested
+    if [[ -n "$REQUESTED_TAG" ]]; then
+        [[ -n "$TAG" && "$REQUESTED_TAG" == "$TAG" ]] && return 1
+        return 0
     fi
-    return 0  # Otherwise → need to redownload
+
+    # If BRANCH requested
+    if [[ -n "$REQUESTED_BRANCH" ]]; then
+        [[ -n "$BRANCH" && "$REQUESTED_BRANCH" == "$BRANCH" ]] && return 1
+        return 0
+    fi
+
+    # If COMMIT requested
+    if [[ -n "$REQUESTED_COMMIT" ]]; then
+        [[ -n "$COMMIT" && "$REQUESTED_COMMIT" == "$COMMIT" ]] && return 1
+        return 0
+    fi
+
+    # Default: anything else → redownload
+    return 0
 }
 
 # =============================================
@@ -352,14 +339,24 @@ ARCHIVE_FILE_DB=$(get_entry_field '.archive')
 load_from_db
 
 if should_redownload; then
-    if [[ -n "$REQUESTED_REF_NAME" ]]; then
-        resolve_specific_ref "$OWNER_REPO" "$REQUESTED_REF_NAME"
+
+    if [[ -n "$REQUESTED_TAG" ]]; then
+        resolve_specific_ref "$OWNER_REPO" "$REQUESTED_TAG" "tag"
+
+    elif [[ -n "$REQUESTED_BRANCH" ]]; then
+        resolve_specific_ref "$OWNER_REPO" "$REQUESTED_BRANCH" "branch"
+
+    elif [[ -n "$REQUESTED_COMMIT" ]]; then
+        resolve_specific_ref "$OWNER_REPO" "$REQUESTED_COMMIT" "commit"
+
     else
         resolve_archive "$OWNER_REPO"
     fi
+
     normalize_version
     download_archive_if_needed
     iecho "Downloaded archive: $ARCHIVE_FILE"
+
 else
     normalize_version
     iecho "Download URL: $ARCHIVE_URL"

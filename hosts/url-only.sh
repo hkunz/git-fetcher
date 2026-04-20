@@ -96,7 +96,7 @@ validate_url_only() {
 # Not supported for generic URLs
 # =============================================
 resolve_specific_ref() {
-    eecho "--ref is not supported for direct archive URLs."
+    eecho "Error: --tag, --branch, and --commit are not supported for direct archive URLs."
     exit 1
 }
 

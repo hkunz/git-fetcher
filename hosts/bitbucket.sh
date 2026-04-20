@@ -36,7 +36,7 @@ resolve_archive() {
 }
 
 resolve_specific_ref() {
-    resolve_specific_ref_generic bitbucket "$1" "$2" "https://bitbucket.org/%s/get/%s.tar.gz"
+    resolve_specific_ref_generic bitbucket "$1" "$2" "$3" "https://bitbucket.org/%s/get/%s.tar.gz"
 }
 
 get_latest_release_tag() {
