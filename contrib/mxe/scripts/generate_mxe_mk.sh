@@ -192,6 +192,8 @@ if [[ -f "$BUILD_SYSTEM_FILE" ]]; then
         decho "Missing .pc file at '$TMP_DIR/$PC_FILE'. Generating fallback pkg-config variables..."
         mxe_generate_pc_file_vars
     fi
+elif [[ "$BUILD_SYSTEM" == "Makefile" || "$BUILD_SYSTEM" == "Autotools" ]]; then
+    decho "Partially supported build system detected: $BUILD_SYSTEM"
 else
     BUILD_SYSTEM_SUPPORT=false
     echo
@@ -243,18 +245,28 @@ fi
 case "$BUILD_SYSTEM" in
     CMake)
         BUILD_OPTIONS_MULTILINE+="\t\t-DCMAKE_BUILD_TYPE=Release"
+        DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
         DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
         DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         ;;
     Meson)
         BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release \\"
+        DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
         DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         MAKE_CMD="MXE_NINJA"
         ;;
-    *)
+    Autotools)
         DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
+        MAKE_CMD="MXE_NINJA"
+        ;;
+    Makefile|*)
+        DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_BUILD/,/# END_BUILD/{N;d;}')
         ;;
 esac
 
@@ -396,8 +408,12 @@ sed \
 -e "/# END_CMAKE/d" \
 -e "/# BEGIN_MESON/d" \
 -e "/# END_MESON/d" \
+-e "/# BEGIN_AUTOTOOLS_SYSTEM/d" \
+-e "/# END_AUTOTOOLS_SYSTEM/d" \
 -e "/# BEGIN_OTHER_BUILD_SYSTEM/d" \
 -e "/# END_OTHER_BUILD_SYSTEM/d" \
+-e "/# BEGIN_BUILD/d" \
+-e "/# END_BUILD/d" \
 -e "/# BEGIN_INCLUDE/d" \
 -e "/# END_INCLUDE/d" \
 -e "/# BEGIN_PC_FILE/d" \
@@ -457,13 +473,13 @@ fi
 envsubst < "$TEST_TEMPLATE" > "$TEST_FILE"
 iecho "Generated test file: $TEST_FILE"
 
-if is_pc_missing_in_src && [ "$BUILD_SYSTEM_SUPPORT" = true ]; then
-    echo
-    echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME_MXE.mk' may have incomplete variables for GENERATE_PC,"
-    echo "       or even the package may dynamically generate a .pc file after building,"
-    echo "       so manual generation may be unnecessary. For accurate values, build the MXE package"
-    echo "       with 'make $PACKAGE_NAME_MXE MXE_KEEP_TMP=1' and re-run this script to populate the missing .pc variables."
-fi
+#if is_pc_missing_in_src && [ "$BUILD_SYSTEM_SUPPORT" = true ]; then
+#    echo
+#    echo "[$(bold_bright_green "NOTE")] The generated '$PACKAGE_NAME_MXE.mk' may have incomplete variables for GENERATE_PC,"
+#    echo "       or even the package may dynamically generate a .pc file after building,"
+#    echo "       so manual generation may be unnecessary. For accurate values, build the MXE package"
+#    echo "       with 'make $PACKAGE_NAME_MXE MXE_KEEP_TMP=1' and re-run this script to populate the missing .pc variables."
+#fi
 
 # =============================================
 # Copy generated files to MXE_ROOT/src with overwrite prompt

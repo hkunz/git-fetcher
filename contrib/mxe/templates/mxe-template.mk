@@ -38,17 +38,23 @@ ${BUILD_OPTIONS_MULTILINE}
 ${BUILD_OPTIONS_MULTILINE}
 		"$(BUILD_DIR)" "$(SOURCE_DIR)${PKG_SUBFOLDER}"
 # END_MESON
-# BEGIN_OTHER_BUILD_SYSTEM
+# BEGIN_AUTOTOOLS_SYSTEM
 	# Configure package
 	cd "$(BUILD_DIR)" && "$(SOURCE_DIR)/configure" \
 		$(MXE_CONFIGURE_OPTS) \
 		--host="$(TARGET)" \
 		--prefix="$(PREFIX)/$(TARGET)"
+# END_AUTOTOOLS_SYSTEM
+# BEGIN_OTHER_BUILD_SYSTEM
+	# build package
+	$(MAKE) -C "$(SOURCE_DIR)" -j $(JOBS)
 # END_OTHER_BUILD_SYSTEM
 
+# BEGIN_BUILD
 	# build package and install
 	$(${MAKE_CMD}) -C "$(BUILD_DIR)" -j $(JOBS)
 	$(${MAKE_CMD}) -C "$(BUILD_DIR)" -j 1 install
+# END_BUILD
 
 # BEGIN_PC_FILE
 	# Only needed if the project does not ship a .pc file
