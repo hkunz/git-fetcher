@@ -43,9 +43,22 @@ PC_FILE=""
 MAIN_CANDIDATE=""
 MIN_DEPTH=999   # Track shallowest depth
 
+C_COUNT=0
+CPP_COUNT=0
+HEADER_COUNT=0
+
 while IFS= read -r file; do
     [[ "$file" == */third_party/* ]] && continue
     case "$file" in
+        *.c)
+            C_COUNT=$((C_COUNT + 1))
+            ;;
+        *.cpp|*.cc|*.cxx)
+            CPP_COUNT=$((CPP_COUNT + 1))
+            ;;
+        *.h|*.hpp)
+            HEADER_COUNT=$((HEADER_COUNT + 1))
+            ;;
         # Meson
         */meson.build|meson.build)
             BUILD_SYSTEM="Meson"
@@ -158,6 +171,12 @@ extract_project_langs() {
 }
 
 case "$BUILD_SYSTEM" in
+    Rust)
+        LANGUAGE="Rust" ;;
+    Go)
+        LANGUAGE="Go" ;;
+    Python)
+        LANGUAGE="Python" ;;
     Bazel)
         NOTE="Note: Bazel projects are not supported by MXE because they attempt to access the network, which is not allowed. You will need to compile the project manually."
         ;;
@@ -172,15 +191,30 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
-if echo "$langs" | grep -qwE "(cpp|cxx|CXX)"; then
-    LANGUAGE="C++"
-elif echo "$langs" | grep -qwE "(^| )c( |$)|(^| )C( |$)"; then
-    LANGUAGE="C"
-elif [[ -n "$langs" ]]; then
-    # fallback for projects like vvdec with no explicit LANGUAGES
-    LANGUAGE="C/C++"
-else
-    LANGUAGE="Unknown"
+# Only continue if language was not already decided by build system
+if [[ -z "$LANGUAGE" ]]; then
+    # 1. Strong signal: explicit project language list
+    if echo "$langs" | grep -qwE "(cpp|cxx|CXX|C\+\+)"; then
+        LANGUAGE="C++"
+    elif echo "$langs" | grep -qwE "(^| )c( |$)|(^| )C( |$)"; then
+        LANGUAGE="C"
+    elif [[ -n "$langs" ]]; then
+        # fallback for projects like vvdec with no explicit LANGUAGES
+        LANGUAGE="C/C++"
+    else
+        # 2. Weak signal: file-based detection
+        if (( CPP_COUNT > 0 && C_COUNT > 0 )); then
+            LANGUAGE="C/C++"
+        elif (( CPP_COUNT > 0 )); then
+            LANGUAGE="C++"
+        elif (( C_COUNT > 0 )); then
+            LANGUAGE="C"
+        elif (( HEADER_COUNT > 0 )); then
+            LANGUAGE="C/C++"
+        else
+            LANGUAGE="Unknown"
+        fi
+    fi
 fi
 
 # ------------------------------
