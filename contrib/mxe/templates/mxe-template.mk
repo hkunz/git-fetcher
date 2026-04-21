@@ -20,6 +20,9 @@ $(PKG)_FILE     := ${TAR_NAME}
 $(PKG)_SUBDIR   := ${SUBDIR_NAME}
 $(PKG)_URL      := ${ARCHIVE_URL}
 # END_NON_GITHUB
+# BEGIN_QT_DIR
+$(PKG)_QT_DIR   := qt6
+# END_QT_DIR
 $(PKG)_DEPS     := ${DEPENDENCIES}
 
 define $(PKG)_BUILD
@@ -45,6 +48,11 @@ ${BUILD_OPTIONS_MULTILINE}
 		--host="$(TARGET)" \
 		--prefix="$(PREFIX)/$(TARGET)"
 # END_AUTOTOOLS_SYSTEM
+# BEGIN_QMAKE
+	# configure package with qmake
+	cd "$(SOURCE_DIR)" && $(PREFIX)/$(TARGET)/$($(PKG)_QT_DIR)/bin/qmake \
+		${QMAKE_OPTIONS}
+# END_QMAKE
 # BEGIN_OTHER_BUILD_SYSTEM
 	# build package
 	$(MAKE) -C "$(SOURCE_DIR)" -j $(JOBS)
@@ -52,8 +60,8 @@ ${BUILD_OPTIONS_MULTILINE}
 
 # BEGIN_BUILD
 	# build package and install
-	$(${MAKE_CMD}) -C "$(BUILD_DIR)" -j $(JOBS)
-	$(${MAKE_CMD}) -C "$(BUILD_DIR)" -j 1 install
+	$(${MAKE_CMD}) -C "$(${BUILD_DIR})" -j $(JOBS)
+	$(${MAKE_CMD}) -C "$(${BUILD_DIR})" -j 1 install
 # END_BUILD
 
 # BEGIN_PC_FILE

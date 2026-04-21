@@ -84,6 +84,13 @@ while IFS= read -r file; do
         */configure|configure)
             [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Autotools"
             ;;
+        # Qt / qmake
+        */qwt.pro|*.pro)
+            [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="QMake"
+            FOUND_PATHS+=("$file")
+            depth=$(awk -F/ '{print NF}' <<< "$file")
+            [[ -z "$MAIN_CANDIDATE" || $depth -lt $MIN_DEPTH ]] && MAIN_CANDIDATE="$file" MIN_DEPTH="$depth"
+            ;;
         # Makefile
         */Makefile|Makefile)
             [[ "$BUILD_SYSTEM" == "Unknown" ]] && BUILD_SYSTEM="Makefile"

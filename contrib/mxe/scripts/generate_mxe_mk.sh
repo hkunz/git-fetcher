@@ -36,6 +36,7 @@ ARCHIVE_URL=""
 CHECKSUM=""
 DESCRIPTION=""
 GIT_URL=""
+BUILD_DIR_NAME_STR="BUILD_DIR"
 DEBUG=false
 
 # =============================================
@@ -241,31 +242,46 @@ else
     DELETE_ARGS+=(-e '/# BEGIN_GITHUB/,/# END_GITHUB/d')  # Remove GitHub block
 fi
 
+if [[ "$BUILD_SYSTEM" == "QMake" ]]; then
+    BUILD_DIR_NAME_STR="SOURCE_DIR"
+else
+    DELETE_ARGS+=("-e" '/# BEGIN_QT_DIR/,/# END_QT_DIR/d')
+fi
+
 # Remove build system blocks
 case "$BUILD_SYSTEM" in
     CMake)
         BUILD_OPTIONS_MULTILINE+="\t\t-DCMAKE_BUILD_TYPE=Release"
         DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
         DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_QMAKE/,/# END_QMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         ;;
     Meson)
         BUILD_OPTIONS_MULTILINE+="\t\t--buildtype=release \\"
         DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
         DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_QMAKE/,/# END_QMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         MAKE_CMD="MXE_NINJA"
         ;;
     Autotools)
         DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_QMAKE/,/# END_QMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
-        MAKE_CMD="MXE_NINJA"
+        ;;
+    QMake)
+        DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_OTHER/,/# END_OTHER/d')
         ;;
     Makefile|*)
         DELETE_ARGS+=("-e" '/# BEGIN_AUTOTOOLS/,/# END_AUTOTOOLS/d')
         DELETE_ARGS+=("-e" '/# BEGIN_CMAKE/,/# END_CMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_MESON/,/# END_MESON/d')
+        DELETE_ARGS+=("-e" '/# BEGIN_QMAKE/,/# END_QMAKE/d')
         DELETE_ARGS+=("-e" '/# BEGIN_BUILD/,/# END_BUILD/{N;d;}')
         ;;
 esac
@@ -397,11 +413,15 @@ sed \
 -e "s|\${CFLAGS_PRIVATE}|$CFLAGS_PRIVATE|g" \
 -e "s|\${CFLAGS}|$CFLAGS|g" \
 -e "s|\${MAKE_CMD}|$MAKE_CMD|g" \
+-e "s|\${BUILD_DIR}|$BUILD_DIR_NAME_STR|g" \
 -e "s|\${PC_FILE_NAME}|$PC_FILE_NAME|g" \
 -e "s|\${SUBDIR_NAME}|$SUBDIR_NAME|g" \
+-e "s|\${QMAKE_OPTIONS}|# QMake options ...|g" \
 -e "s|\${TAR_NAME}|$TAR_NAME|g" \
 -e "/# BEGIN_GITHUB/d" \
 -e "/# END_GITHUB/d" \
+-e "/# BEGIN_QT_DIR/d" \
+-e "/# END_QT_DIR/d" \
 -e "/# BEGIN_NON_GITHUB/d" \
 -e "/# END_NON_GITHUB/d" \
 -e "/# BEGIN_CMAKE/d" \
@@ -410,6 +430,8 @@ sed \
 -e "/# END_MESON/d" \
 -e "/# BEGIN_AUTOTOOLS_SYSTEM/d" \
 -e "/# END_AUTOTOOLS_SYSTEM/d" \
+-e "/# BEGIN_QMAKE/d" \
+-e "/# END_QMAKE/d" \
 -e "/# BEGIN_OTHER_BUILD_SYSTEM/d" \
 -e "/# END_OTHER_BUILD_SYSTEM/d" \
 -e "/# BEGIN_BUILD/d" \
